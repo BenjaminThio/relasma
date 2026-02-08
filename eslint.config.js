@@ -16,6 +16,7 @@ export default defineConfig([
 	{
 		rules: {
 			"semi": ["error", "always"]
-		}
+		},
+		ignores: ["dist/**", "node_modules/**"]
 	}
 ]);

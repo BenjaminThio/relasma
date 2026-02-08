@@ -1,5 +1,5 @@
 import { collection, deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import db from "../../utils/firebase-config";
+import db from "../../utils/firebase-config.js";
 
 export interface TicTacToeData {
     board: (boolean | null)[],

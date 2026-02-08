@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import type { Commit, PushEvent } from "@octokit/webhooks-types";
-import { bot } from "../src/bot";
+import { bot } from "../src/bot.js";
 import { collection, doc, getDoc, updateDoc } from "firebase/firestore";
-import db from "../utils/firebase-config";
+import db from "../utils/firebase-config.js";
 import { type CommandContext, Context } from "grammy";
 
 export async function updateChatId(chatId: number): Promise<void> {

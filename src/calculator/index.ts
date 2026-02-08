@@ -1,6 +1,6 @@
 import { type CallbackQueryContext, type CommandContext, Composer, Context, InlineKeyboard } from "grammy";
-import { type CalculatorData, createNewCalculator, getCalculatorData, updateCalculator, userExists } from "./database";
-import { Callbacks } from "../types";
+import { type CalculatorData, createNewCalculator, getCalculatorData, updateCalculator, userExists } from "./database.js";
+import { Callbacks } from "../types.js";
 
 const calculatorModule: Composer<Context> = new Composer();
 const BASIC: InlineKeyboard = new InlineKeyboard()

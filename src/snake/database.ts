@@ -1,6 +1,6 @@
 import { type FirestoreDataConverter, type SnapshotOptions, QueryDocumentSnapshot, collection, deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import db from "../../utils/firebase-config";
-import { Coord } from "../types";
+import db from "../../utils/firebase-config.js";
+import { Coord } from "../types.js";
 
 export interface SnakeGameData {
     parts: Coord[],

@@ -1,6 +1,6 @@
 import { type CallbackQueryContext, type CommandContext, Context, InlineKeyboard, Composer } from "grammy";
-import { type SnakeGameData, createNewSnakeGame, deleteSnakeDoc, getSnakeGameData, updateSnakeGame, userExists } from "./database";
-import { Movement, Coord, contains, Callbacks } from "../types";
+import { type SnakeGameData, createNewSnakeGame, deleteSnakeDoc, getSnakeGameData, updateSnakeGame, userExists } from "./database.js";
+import { Movement, Coord, contains, Callbacks } from "../types.js";
 
 const snakeModule = new Composer();
 const HEIGHT: number = 10;

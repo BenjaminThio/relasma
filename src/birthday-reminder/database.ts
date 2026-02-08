@@ -1,5 +1,5 @@
 import { collection, addDoc } from "firebase/firestore";
-import db from "../../utils/firebase-config";
+import db from "../../utils/firebase-config.js";
 
 export interface BirthdayData {
     name: string;

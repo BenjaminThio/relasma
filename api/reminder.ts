@@ -1,6 +1,6 @@
 import type { VercelRequest , VercelResponse } from "@vercel/node";
-import { bot } from "../src/bot";
-import { type BirthdayData, birthdayRef } from "../src/birthday-reminder/database";
+import { bot } from "../src/bot.js";
+import { type BirthdayData, birthdayRef } from "../src/birthday-reminder/database.js";
 import { type DocumentData, getDocs, Query, query, QuerySnapshot, where } from "firebase/firestore";
 
 const CHAT_ID: number = 1074283475;

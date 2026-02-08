@@ -1,5 +1,5 @@
 import { type CommandContext, Composer, Context } from "grammy";
-import { createNewBirthday } from "./database";
+import { createNewBirthday } from "./database.js";
 
 const birthdayModule: Composer<Context> = new Composer();
 const SEPARATORS: string[] = ['/', '-', '.'];

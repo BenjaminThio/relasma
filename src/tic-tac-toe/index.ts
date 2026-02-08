@@ -1,6 +1,6 @@
 import { type CallbackQueryContext, type CommandContext, Composer, Context, InlineKeyboard } from "grammy";
-import { Callbacks } from "../types";
-import { type TicTacToeData, createNewTicTacToe, deleteTicTacToeDoc, getTicTacToeData, updateTicTacToe, userExists } from "./database";
+import { Callbacks } from "../types.js";
+import { type TicTacToeData, createNewTicTacToe, deleteTicTacToeDoc, getTicTacToeData, updateTicTacToe, userExists } from "./database.js";
 
 const ticTacToeModule: Composer<Context> = new Composer();
 const MARKS: string[] = ["❌", "⭕️"];

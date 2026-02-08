@@ -1,6 +1,6 @@
 import { type CallbackQueryContext, type CommandContext, Composer, Context, InlineKeyboard } from "grammy";
-import { Callbacks, contains, Coord, Movement } from "../types";
-import { type SokobanGameData, createNewSokobanGame, deleteSokobanDoc, getSokobanGameData, updateSokobanGame, userExists } from "./database";
+import { Callbacks, contains, Coord, Movement } from "../types.js";
+import { type SokobanGameData, createNewSokobanGame, deleteSokobanDoc, getSokobanGameData, updateSokobanGame, userExists } from "./database.js";
 
 const sokobanModule = new Composer();
 const HEIGHT: number = 5;
