@@ -1,6 +1,8 @@
 {
   "scripts": {
-    "dev:local": "bun --watch src/local.ts"
+    "dev": "bun --watch src/local.ts",
+    "build": "tsc",
+    "vercel-build": "bun run build"
   },
   "name": "relasma",
   "module": "index.ts",
