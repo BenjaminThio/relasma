@@ -1,0 +1,142 @@
+import { InlineKeyboard, Composer } from "grammy";
+import { createNewSnakeGame, deleteSnakeDoc, getSnakeGameData, updateSnakeGame, userExists } from "./database.js";
+import { Movement, Coord, contains, Callbacks } from "../types.js";
+const snakeModule = new Composer();
+const HEIGHT = 10;
+const WIDTH = 10;
+const BACKGROUND = "⬜️";
+const BARRIER = "🟨";
+const HEAD = "😳";
+const BODY = "🟡";
+const FOOD = "🍎";
+const KEYBOARD = new InlineKeyboard()
+    .text("⬆️", `${Callbacks.SNAKE} ${Movement.UP}`).row()
+    .text("⬅️", `${Callbacks.SNAKE} ${Movement.LEFT}`).text("🔄", `${Callbacks.SNAKE} 4`).text("➡️", `${Callbacks.SNAKE} ${Movement.RIGHT}`).row()
+    .text("⬇️", `${Callbacks.SNAKE} ${Movement.DOWN}`);
+const games = {};
+const getHead = (userId) => getGame(userId).parts[0];
+const getBody = (userId) => getGame(userId).parts.slice(1);
+const getGame = (userId) => {
+    const game = games[userId];
+    if (game !== undefined)
+        return game;
+    else
+        throw new Error("Game not found!");
+};
+snakeModule.command("snake", async (ctx) => {
+    if (!ctx.from) {
+        ctx.reply("`ctx.from` is undefined.");
+        return;
+    }
+    const userId = ctx.from.id;
+    if (!(userId in games)) {
+        if (await userExists(userId)) {
+            games[userId] = await getSnakeGameData(userId);
+        }
+        else {
+            games[userId] = {
+                parts: [],
+                foodCoord: new Coord(0, 0),
+            };
+            getGame(userId).parts = [new Coord(Math.floor(Math.random() * WIDTH), Math.floor(Math.random() * HEIGHT))];
+            generateFood(userId);
+            await createNewSnakeGame(userId, getGame(userId));
+        }
+    }
+    await ctx.reply(renderMap(userId), { reply_markup: KEYBOARD });
+});
+snakeModule.callbackQuery(new RegExp(`^${Callbacks.SNAKE} ([0-3])$`), async (ctx) => {
+    const direction = Number(ctx.match[1]);
+    switch (direction) {
+        case Movement.UP:
+            await move(ctx, 0, -1);
+            break;
+        case Movement.LEFT:
+            await move(ctx, -1, 0);
+            break;
+        case Movement.DOWN:
+            await move(ctx, 0, 1);
+            break;
+        case Movement.RIGHT:
+            await move(ctx, 1, 0);
+    }
+});
+async function move(ctx, x, y) {
+    if (!ctx.from) {
+        ctx.reply("`ctx.from` is undefined.");
+        return;
+    }
+    const userId = ctx.from.id;
+    if (x < 0 || x > 0) {
+        if (getHead(userId).x + x >= 0 && getHead(userId).x + x < WIDTH)
+            getGame(userId).parts.splice(0, 0, new Coord(getHead(userId).x + x, getHead(userId).y));
+        else if (getHead(userId).x + x >= 0)
+            getGame(userId).parts.splice(0, 0, new Coord(0, getHead(userId).y));
+        else
+            getGame(userId).parts.splice(0, 0, new Coord(WIDTH - 1, getHead(userId).y));
+    }
+    if (y < 0 || y > 0) {
+        if (getHead(userId).y + y >= 0 && getHead(userId).y + y < HEIGHT)
+            getGame(userId).parts.splice(0, 0, new Coord(getHead(userId).x, getHead(userId).y + y));
+        else if (getHead(userId).y + y >= 0)
+            getGame(userId).parts.splice(0, 0, new Coord(getHead(userId).x, 0));
+        else
+            getGame(userId).parts.splice(0, 0, new Coord(getHead(userId).x, HEIGHT - 1));
+    }
+    ctx.answerCallbackQuery();
+    if (getHead(userId).equals(getGame(userId).foodCoord)) {
+        if (generateFood(userId) === 0) {
+            await ctx.editMessageText(`<b>Game Over!</b>\n${renderMap(userId)}`, { parse_mode: "HTML" });
+            await deleteSnakeDoc(userId);
+            delete games[userId];
+            return;
+        }
+    }
+    else if (contains(getBody(userId), getHead(userId))) {
+        await ctx.editMessageText(`<b>Game Over!\nScore: ${getGame(userId).parts.length - 1}</b>\n${renderMap(userId)}`, { parse_mode: "HTML" });
+        await deleteSnakeDoc(userId);
+        delete games[userId];
+        return;
+    }
+    else
+        getGame(userId).parts.pop();
+    await updateSnakeGame(userId, getGame(userId));
+    await ctx.editMessageText(renderMap(userId), { reply_markup: KEYBOARD });
+}
+function renderMap(userId) {
+    let renderer = "";
+    renderer += `${BARRIER.repeat(WIDTH + 2)}\n${BARRIER}`;
+    for (let y = 0; y < HEIGHT; y++) {
+        for (let x = 0; x < WIDTH; x++) {
+            if (getHead(userId).equals(new Coord(x, y)))
+                renderer += HEAD;
+            else if (contains(getGame(userId).parts, x, y))
+                renderer += BODY;
+            else if (getGame(userId).foodCoord.equals(new Coord(x, y)))
+                renderer += FOOD;
+            else
+                renderer += BACKGROUND;
+        }
+        renderer += `${BARRIER}\n${BARRIER}`;
+    }
+    renderer += BARRIER.repeat(WIDTH + 1);
+    return renderer;
+}
+function generateFood(userId) {
+    const availableCoords = [];
+    for (let y = 0; y < HEIGHT; y++) {
+        for (let x = 0; x < WIDTH; x++) {
+            if (!contains(getGame(userId).parts, x, y)) {
+                availableCoords.push(new Coord(x, y));
+            }
+        }
+    }
+    switch (availableCoords.length) {
+        case 0:
+            break;
+        default:
+            getGame(userId).foodCoord = availableCoords[Math.floor(Math.random() * availableCoords.length)]; // randomCoord
+    }
+    return availableCoords.length;
+}
+export default snakeModule;
