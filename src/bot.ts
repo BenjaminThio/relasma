@@ -23,7 +23,7 @@ for (const file of await readdir(__dirname, { withFileTypes: true })) {
     if (!file.isDirectory())
         continue;
     else {
-        const mod: CommandModule = (await import(pathToFileURL(path.join(__dirname, file.name, "index")).href)) as CommandModule;
+        const mod: CommandModule = (await import(pathToFileURL(path.join(__dirname, file.name, "index.js")).href)) as CommandModule;
 
         bot.use(mod.default);
     }
