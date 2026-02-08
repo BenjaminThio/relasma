@@ -15,8 +15,17 @@ const KEYBOARD: InlineKeyboard = new InlineKeyboard()
     .text("⬅️", `${Callbacks.SNAKE} ${Movement.LEFT}`).text("🔄", `${Callbacks.SNAKE} 4`).text("➡️", `${Callbacks.SNAKE} ${Movement.RIGHT}`).row()
     .text("⬇️", `${Callbacks.SNAKE} ${Movement.DOWN}`);
 const games: Record<number, SnakeGameData> = {};
-const getHead = (userId: number) => games[userId].parts[0];
-const getBody = (userId: number) => games[userId].parts.slice(1);
+const getHead = (userId: number) => getGame(userId).parts[0]!;
+const getBody = (userId: number) => getGame(userId).parts.slice(1);
+
+const getGame = (userId: number) => {
+    const game: SnakeGameData | undefined = games[userId];
+
+    if (game !== undefined)
+        return game;
+    else
+        throw new Error("Game not found!");
+};
 
 snakeModule.command("snake", async (ctx: CommandContext<Context>): Promise<void> => {
     if (!ctx.from) {
@@ -34,13 +43,13 @@ snakeModule.command("snake", async (ctx: CommandContext<Context>): Promise<void>
                 parts: [],
                 foodCoord: new Coord(0, 0),
             };
-            games[userId].parts = [new Coord(Math.floor(Math.random() * WIDTH), Math.floor(Math.random() * HEIGHT))];
+            getGame(userId).parts = [new Coord(Math.floor(Math.random() * WIDTH), Math.floor(Math.random() * HEIGHT))];
             generateFood(userId);
-            await createNewSnakeGame(userId, games[userId]);
+            await createNewSnakeGame(userId, getGame(userId));
         }
     }
     await ctx.reply(renderMap(userId), {reply_markup: KEYBOARD});
-})
+});
 
 snakeModule.callbackQuery(new RegExp(`^${Callbacks.SNAKE} ([0-3])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
     const direction: Movement = Number(ctx.match[1]);
@@ -58,7 +67,7 @@ snakeModule.callbackQuery(new RegExp(`^${Callbacks.SNAKE} ([0-3])$`), async (ctx
         case Movement.RIGHT:
             await move(ctx, 1, 0);
     }
-})
+});
 
 async function move(ctx: CallbackQueryContext<Context>, x: number, y: number) {
     if (!ctx.from) {
@@ -70,25 +79,25 @@ async function move(ctx: CallbackQueryContext<Context>, x: number, y: number) {
 
     if (x < 0 || x > 0) {
         if (getHead(userId).x + x >= 0 && getHead(userId).x + x < WIDTH)
-            games[userId].parts.splice(0, 0, new Coord(getHead(userId).x + x, getHead(userId).y));
+            getGame(userId).parts.splice(0, 0, new Coord(getHead(userId).x + x, getHead(userId).y));
         else if (getHead(userId).x + x >= 0)
-            games[userId].parts.splice(0, 0, new Coord(0, getHead(userId).y));
+            getGame(userId).parts.splice(0, 0, new Coord(0, getHead(userId).y));
         else
-            games[userId].parts.splice(0, 0, new Coord(WIDTH - 1, getHead(userId).y));
+            getGame(userId).parts.splice(0, 0, new Coord(WIDTH - 1, getHead(userId).y));
     }
 
     if (y < 0 || y > 0) {
         if (getHead(userId).y + y >= 0 && getHead(userId).y + y < HEIGHT)
-            games[userId].parts.splice(0, 0, new Coord(getHead(userId).x, getHead(userId).y + y));
+            getGame(userId).parts.splice(0, 0, new Coord(getHead(userId).x, getHead(userId).y + y));
         else if (getHead(userId).y + y >= 0)
-            games[userId].parts.splice(0, 0, new Coord(getHead(userId).x, 0));
+            getGame(userId).parts.splice(0, 0, new Coord(getHead(userId).x, 0));
         else
-            games[userId].parts.splice(0, 0, new Coord(getHead(userId).x, HEIGHT - 1));
+            getGame(userId).parts.splice(0, 0, new Coord(getHead(userId).x, HEIGHT - 1));
     }
 
     ctx.answerCallbackQuery();
 
-    if (getHead(userId).equals(games[userId].foodCoord)) {
+    if (getHead(userId).equals(getGame(userId).foodCoord)) {
         if (generateFood(userId) === 0) {
             await ctx.editMessageText(`<b>Game Over!</b>\n${renderMap(userId)}`, { parse_mode: "HTML" });
             await deleteSnakeDoc(userId);
@@ -96,14 +105,14 @@ async function move(ctx: CallbackQueryContext<Context>, x: number, y: number) {
             return;
         }
     } else if (contains(getBody(userId), getHead(userId))) {
-        await ctx.editMessageText(`<b>Game Over!\nScore: ${games[userId].parts.length - 1}</b>\n${renderMap(userId)}`, { parse_mode: "HTML" });
+        await ctx.editMessageText(`<b>Game Over!\nScore: ${getGame(userId).parts.length - 1}</b>\n${renderMap(userId)}`, { parse_mode: "HTML" });
         await deleteSnakeDoc(userId);
         delete games[userId];
         return;
     } else
-        games[userId].parts.pop();
+        getGame(userId).parts.pop();
 
-    await updateSnakeGame(userId, games[userId]);
+    await updateSnakeGame(userId, getGame(userId));
     await ctx.editMessageText(renderMap(userId), {reply_markup: KEYBOARD});
 }
 
@@ -115,9 +124,9 @@ function renderMap(userId: number): string {
         for (let x: number = 0; x < WIDTH; x++) {
             if (getHead(userId).equals(new Coord(x, y)))
                 renderer += HEAD;
-            else if (contains(games[userId].parts, x, y))
+            else if (contains(getGame(userId).parts, x, y))
                 renderer += BODY;
-            else if (games[userId].foodCoord.equals(new Coord(x, y)))
+            else if (getGame(userId).foodCoord.equals(new Coord(x, y)))
                 renderer += FOOD;
             else
                 renderer += BACKGROUND;
@@ -134,7 +143,7 @@ function generateFood(userId: number): number {
 
     for (let y: number = 0; y < HEIGHT; y++) {
         for (let x: number = 0; x < WIDTH; x++) {
-            if (!contains(games[userId].parts, x, y)) {
+            if (!contains(getGame(userId).parts, x, y)) {
                 availableCoords.push(new Coord(x, y));
             }
         }
@@ -144,7 +153,7 @@ function generateFood(userId: number): number {
         case 0:
             break;
         default:
-            games[userId].foodCoord = availableCoords[Math.floor(Math.random() * availableCoords.length)]; // randomCoord
+            getGame(userId).foodCoord = availableCoords[Math.floor(Math.random() * availableCoords.length)]!; // randomCoord
     }
 
     return availableCoords.length;

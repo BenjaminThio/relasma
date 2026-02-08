@@ -17,6 +17,15 @@ const KEYBOARD: InlineKeyboard = new InlineKeyboard()
 
 const games: Record<string, SokobanGameData> = {};
 
+const getGame = (userId: number): SokobanGameData => {
+    const game: SokobanGameData | undefined = games[userId];
+
+    if (game !== undefined)
+        return game;
+    else
+        throw new Error(`Game not found.`);
+};
+
 sokobanModule.command("sokoban", async (ctx: CommandContext<Context>): Promise<void> => {
     if (ctx.from === undefined) {
         ctx.reply("`ctx.from` is undefined.");
@@ -35,11 +44,11 @@ sokobanModule.command("sokoban", async (ctx: CommandContext<Context>): Promise<v
             };
 
             reshuffle(ctx.from.id);
-            createNewSokobanGame(ctx.from.id, games[ctx.from.id]);
+            createNewSokobanGame(ctx.from.id, getGame(ctx.from.id));
         }
     }
     ctx.reply(renderMap(ctx.from.id), { reply_markup: KEYBOARD });
-})
+});
 
 sokobanModule.callbackQuery(new RegExp(`^${Callbacks.SOKOBAN} ([0-3])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
     if (ctx.from === undefined) {
@@ -71,9 +80,9 @@ sokobanModule.callbackQuery(new RegExp(`^${Callbacks.SOKOBAN} ([0-3])$`), async 
         return;
     }
 
-    await updateSokobanGame(ctx.from.id, games[ctx.from.id]);
+    await updateSokobanGame(ctx.from.id, getGame(ctx.from.id));
     await ctx.editMessageText(renderMap(ctx.from.id), { reply_markup: KEYBOARD });
-})
+});
 
 function reshuffle(userId: number): void {
     const availableCoords: Coord[] = [];
@@ -87,26 +96,26 @@ function reshuffle(userId: number): void {
     for (let i: number = 0; i < 3; i++) {
         const randomBoxIndex: number = Math.floor(Math.random() * availableCoords.length);
 
-        games[userId].boxes.push(availableCoords[randomBoxIndex]);
+        getGame(userId).boxes.push(availableCoords[randomBoxIndex]!);
         availableCoords.splice(randomBoxIndex, 1);
 
         const randomDstIndex: number = Math.floor(Math.random() * availableCoords.length);
 
-        games[userId].destinations.push(availableCoords[randomDstIndex]);
+        getGame(userId).destinations.push(availableCoords[randomDstIndex]!);
         availableCoords.splice(randomDstIndex, 1);
 
         const randomBarrierIndex: number = Math.floor(Math.random() * availableCoords.length);
 
-        games[userId].barriers.push(availableCoords[randomBarrierIndex]);
+        getGame(userId).barriers.push(availableCoords[randomBarrierIndex]!);
         availableCoords.splice(randomBarrierIndex, 1);
     }
 
-    games[userId].player = availableCoords[Math.floor(Math.random() * availableCoords.length)];
+    getGame(userId).player = availableCoords[Math.floor(Math.random() * availableCoords.length)]!;
 }
 
 function movePlayer(userId: number, x: number, y: number): void {
-    let xCoord = games[userId].player.x;
-    let yCoord = games[userId].player.y;
+    let xCoord = getGame(userId).player.x;
+    let yCoord = getGame(userId).player.y;
 
     if (xCoord + x >= 0 && xCoord + x < WIDTH)
         xCoord += x;
@@ -122,29 +131,29 @@ function movePlayer(userId: number, x: number, y: number): void {
     else
         yCoord = 0;
 
-    if (contains(games[userId].destinations, xCoord, yCoord) || contains(games[userId].barriers, xCoord, yCoord))
+    if (contains(getGame(userId).destinations, xCoord, yCoord) || contains(getGame(userId).barriers, xCoord, yCoord))
         return;
-    else if (contains(games[userId].boxes, xCoord, yCoord)) {
-        const boxIndex = games[userId].boxes.findIndex((coord: Coord) => coord.x === xCoord && coord.y === yCoord);
+    else if (contains(getGame(userId).boxes, xCoord, yCoord)) {
+        const boxIndex = getGame(userId).boxes.findIndex((coord: Coord) => coord.x === xCoord && coord.y === yCoord);
         const newBoxPos = moveBox(userId, boxIndex, x, y);
 
         if (newBoxPos) {
-            games[userId].boxes[boxIndex] = newBoxPos;
+            getGame(userId).boxes[boxIndex] = newBoxPos;
         } else {
             return;
         }
     }
-    games[userId].player = new Coord(xCoord, yCoord);
+    getGame(userId).player = new Coord(xCoord, yCoord);
 }
 
 const gameOver = (userId: number): boolean =>
-    games[userId].boxes.every((boxCoord: Coord) =>
-            contains(games[userId].destinations, boxCoord));
+    getGame(userId).boxes.every((boxCoord: Coord) =>
+            contains(getGame(userId).destinations, boxCoord));
 
 function moveBox(userId: number, boxIndex: number, x: number, y: number): Coord | undefined {
     // console.log(boxes[boxIndex]);
-    let xCoord: number = games[userId].boxes[boxIndex].x;
-    let yCoord: number = games[userId].boxes[boxIndex].y;
+    let xCoord: number = getGame(userId).boxes[boxIndex]!.x;
+    let yCoord: number = getGame(userId).boxes[boxIndex]!.y;
 
     if (xCoord + x >= 0 && xCoord + x < WIDTH)
         xCoord += x;
@@ -160,7 +169,7 @@ function moveBox(userId: number, boxIndex: number, x: number, y: number): Coord 
     else
         yCoord = 0;
 
-    if (contains(games[userId].boxes, xCoord, yCoord) || contains(games[userId].barriers, xCoord, yCoord))
+    if (contains(getGame(userId).boxes, xCoord, yCoord) || contains(getGame(userId).barriers, xCoord, yCoord))
         return;
     else
         return new Coord(xCoord, yCoord);
@@ -172,16 +181,16 @@ function renderMap(userId: number): string {
     renderer += `${BARRIER.repeat(WIDTH + 2)}\n${BARRIER}`;
     for (let y: number = 0; y < HEIGHT; y++) {
         for (let x: number = 0; x < WIDTH; x++) {
-            if (games[userId].player.equals(new Coord(x, y)))
+            if (getGame(userId).player.equals(new Coord(x, y)))
                 renderer += PLAYER;
-            else if (contains(games[userId].barriers, x, y) ||
-                    contains(games[userId].boxes, x, y) &&
-                    contains(games[userId].destinations, x, y)
+            else if (contains(getGame(userId).barriers, x, y) ||
+                    contains(getGame(userId).boxes, x, y) &&
+                    contains(getGame(userId).destinations, x, y)
                 )
                 renderer += BARRIER;
-            else if (contains(games[userId].boxes, x, y))
+            else if (contains(getGame(userId).boxes, x, y))
                 renderer += BOX;
-            else if (contains(games[userId].destinations, x, y))
+            else if (contains(getGame(userId).destinations, x, y))
                 renderer += DESTINATION;
             else
                 renderer += BACKGROUND;

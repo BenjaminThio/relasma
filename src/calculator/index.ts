@@ -67,6 +67,15 @@ export enum Keys {
 }
 const calculators: Record<string, CalculatorData> = {};
 
+const getCalculator = (userId: number): CalculatorData => {
+    const calculator: CalculatorData | undefined = getCalculator(userId);
+
+    if (calculator !== undefined)
+        return calculator;
+    else
+        throw new Error("Calculator not found.");
+};
+
 calculatorModule.command("cal", async (ctx: CommandContext<Context>): Promise<void> => {
     if (ctx.from === undefined) {
         ctx.reply("`ctx.from` is undefined.");
@@ -84,10 +93,10 @@ calculatorModule.command("cal", async (ctx: CommandContext<Context>): Promise<vo
                 result: ""
             };
 
-            createNewCalculator(ctx.from.id, calculators[ctx.from.id]);
+            createNewCalculator(ctx.from.id, getCalculator(ctx.from.id));
         }
     }
-    ctx.reply(render(ctx.from.id), { reply_markup: calculators[ctx.from.id].scientific ? (calculators[ctx.from.id].secondary ? INV_SCIENTIFIC : SCIENTIFIC) : BASIC });
+    ctx.reply(render(ctx.from.id), { reply_markup: getCalculator(ctx.from.id).scientific ? (getCalculator(ctx.from.id).secondary ? INV_SCIENTIFIC : SCIENTIFIC) : BASIC });
 });
 
 calculatorModule.callbackQuery(new RegExp(`^${Callbacks.CALCULATOR} ([0-9]|[1-2][0-9]|3[0-7])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
@@ -95,34 +104,34 @@ calculatorModule.callbackQuery(new RegExp(`^${Callbacks.CALCULATOR} ([0-9]|[1-2]
 
     switch (key) {
         case Keys.CLEAR:
-            calculators[ctx.from.id].entries = [];
-            calculators[ctx.from.id].result = "";
+            getCalculator(ctx.from.id).entries = [];
+            getCalculator(ctx.from.id).result = "";
             break;
         case Keys.BACKSPACE:
-            calculators[ctx.from.id].entries.pop();
+            getCalculator(ctx.from.id).entries.pop();
             break;
         case Keys.MODE_SWITCH:
-            calculators[ctx.from.id].scientific = !calculators[ctx.from.id].scientific;
+            getCalculator(ctx.from.id).scientific = !getCalculator(ctx.from.id).scientific;
             break;
         case Keys.EQUAL:
-            calculators[ctx.from.id].result = compileExpression(ctx.from.id);
+            getCalculator(ctx.from.id).result = compileExpression(ctx.from.id);
             break;
         case Keys.SECONDARY:
-            calculators[ctx.from.id].secondary = !calculators[ctx.from.id].secondary;
+            getCalculator(ctx.from.id).secondary = !getCalculator(ctx.from.id).secondary;
             break;
         default:
-            calculators[ctx.from.id].entries.push(key);
+            getCalculator(ctx.from.id).entries.push(key);
     }
 
     ctx.answerCallbackQuery();
-    await updateCalculator(ctx.from.id, calculators[ctx.from.id]);
-    await ctx.editMessageText(render(ctx.from.id), { reply_markup: calculators[ctx.from.id].scientific ? (calculators[ctx.from.id].secondary ? INV_SCIENTIFIC : SCIENTIFIC) : BASIC });
+    await updateCalculator(ctx.from.id, getCalculator(ctx.from.id));
+    await ctx.editMessageText(render(ctx.from.id), { reply_markup: getCalculator(ctx.from.id).scientific ? (getCalculator(ctx.from.id).secondary ? INV_SCIENTIFIC : SCIENTIFIC) : BASIC });
 });
 
 function render(userId: number): string {
     let renderer: string = "";
 
-    for (const entry of calculators[userId].entries) {
+    for (const entry of getCalculator(userId).entries) {
         if (entry >= 0 && entry <= 9)
             renderer += entry;
         else {
@@ -196,14 +205,14 @@ function render(userId: number): string {
         }
     }
 
-    return `Entries: ${renderer.length > 0 ? renderer : '0'}\nResult: ${calculators[userId].result.length > 0 ? calculators[userId].result : '0'}`;
+    return `Entries: ${renderer.length > 0 ? renderer : '0'}\nResult: ${getCalculator(userId).result.length > 0 ? getCalculator(userId).result : '0'}`;
 }
 
 // Compiler
 export function compileExpression(userId: number): string {
     let compiler = "";
 
-    for (const entry of calculators[userId].entries) {
+    for (const entry of getCalculator(userId).entries) {
         if (entry >= 0 && entry <= 9)
             compiler += entry;
         else {

@@ -17,13 +17,14 @@ class Birthday {
     }
 
     public static tryParse(s: string, retryCounter: number = 0): Birthday {
+        // eslint-disable-next-line no-useless-assignment
         let date: string[] = [];
 
         switch (retryCounter) {
             case 0:
             case 1:
             case 2:
-                date = s.split(SEPARATORS[retryCounter]);
+                date = s.split(SEPARATORS[retryCounter]!);
                 break;
             default:
                 throw new Error(`Invalid format.\nExamples:\n${
@@ -43,7 +44,7 @@ class Birthday {
             errs.push("Parameter <Day> is not a valid integer.");
 
         if (Number.isNaN(birthday.month)) {
-            birthday.month = this.tryParseMonth(date[1]);
+            birthday.month = this.tryParseMonth(date[1]!);
 
             if (Number.isNaN(birthday.month))
                 errs.push("Parameter <Month> is not a valid integer.");
@@ -77,7 +78,7 @@ birthdayModule.command("birthday", async (ctx: CommandContext<Context>): Promise
         const params: string[] = payload.split(' ');
 
         if (params.length >= 2) {
-            const birthday: Birthday = Birthday.tryParse(params[0]);
+            const birthday: Birthday = Birthday.tryParse(params[0]!);
 
             params.slice(0, 1);
 
