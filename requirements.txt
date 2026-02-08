@@ -1,0 +1,6 @@
+fastapi
+pydantic
+yt_dlp
+gTTS
+beautifulsoup4
+playwright
