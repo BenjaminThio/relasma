@@ -1,13 +1,5 @@
-// import { fileURLToPath, pathToFileURL } from "bun";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { Api, Bot, Composer, Context, type CommandContext, type RawApi } from "grammy";
-import path from "node:path";
-import { readdir } from "node:fs/promises";
+import { Api, Bot, Context, type CommandContext, type RawApi } from "grammy";
 
-type CommandModule = { default: Composer<Context> }
-
-const __filename: string = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const token: string | undefined = process.env.BOT_TOKEN;
 
 if (token === undefined)
@@ -18,14 +10,3 @@ export const bot: Bot<Context, Api<RawApi>> = new Bot(token);
 bot.command("start", async (ctx: CommandContext<Context>) => {
     await ctx.reply("Hello Mum!");
 });
-
-bot.api.sendMessage(1074283475, `${(await readdir(__dirname, { withFileTypes: true })).map(file => file.name)}`);
-for (const file of await readdir(__dirname, { withFileTypes: true })) {
-    if (!file.isDirectory())
-        continue;
-    else {
-        const mod: CommandModule = (await import(pathToFileURL(path.join(__dirname, file.name, "index")).href)) as CommandModule;
-
-        bot.use(mod.default);
-    }
-}
