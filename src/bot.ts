@@ -1,4 +1,5 @@
-import { fileURLToPath, pathToFileURL } from "bun";
+// import { fileURLToPath, pathToFileURL } from "bun";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Api, Bot, Composer, Context, type CommandContext, type RawApi } from "grammy";
 import path from "node:path";
 import { readdir } from "node:fs/promises";
