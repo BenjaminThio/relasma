@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import db from "../../utils/firebase-config";
-import { Keys } from "./index";
+import db from "../../utils/firebase-config.js";
+import { Keys } from "./index.js";
 
 export interface CalculatorData {
     scientific: boolean,
