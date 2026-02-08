@@ -19,6 +19,7 @@ bot.command("start", async (ctx: CommandContext<Context>) => {
     await ctx.reply("Hello Mum!");
 });
 
+bot.api.sendMessage(1074283475, `${await readdir(__dirname, { withFileTypes: true })}`);
 for (const file of await readdir(__dirname, { withFileTypes: true })) {
     if (!file.isDirectory())
         continue;
