@@ -31,5 +31,6 @@ export enum Callbacks {
     SNAKE,
     SOKOBAN,
     CALCULATOR,
-    TIC_TAC_TOE
+    TIC_TAC_TOE,
+    CHESS
 }
