@@ -4,7 +4,6 @@ import { bot } from "../src/bot.js";
 import { collection, doc, getDoc, updateDoc } from "firebase/firestore";
 import db from "../utils/firebase-config.js";
 import { type CommandContext, Context } from "grammy";
-import { escapeHTML } from "bun";
 
 export async function updateChatId(chatId: number): Promise<void> {
     await updateDoc(doc(collection(db, "temp"), "report"), {
