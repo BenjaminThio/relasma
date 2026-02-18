@@ -38,7 +38,7 @@ export default async (req: VercelRequest, res: VercelResponse): Promise<void> =>
             if (chatId)
                 await bot.api.sendMessage(chatId,
                     "🚀 <b>New Commit Pushed!</b>\n\n" +
-                    `📂 <b>Repo:</b> [${repoName}](${repoLink})\n` + 
+                    `📂 <b>Repo:</b> <a href="${repoLink}">${repoName}</a>\n` + 
                     `🍁 <n>Branch:</b> ${branch}\n` +
                     `👤 <b>Pusher:</b> ${pusher}\n\n` +
                     `<b>Commits:</b>\n${commitList}\n\n` +
