@@ -1,15 +1,16 @@
-import { CallbackQueryContext, CommandContext, Composer, Context, InlineKeyboard } from "grammy";
+import { CallbackQueryContext, CommandContext, Composer, Context, InlineKeyboard, InputFile, InputMediaBuilder } from "grammy";
 import { Callbacks } from "../types.js";
+import { generateImage } from "../test-cpp/index.js";
 
 type Rank = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type File = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type RankDirection = -1 | 0 | 1;
 type FileDirection = -1 | 0 | 1;
-type Position = `${Rank},${File}`;
+export type Position = `${Rank},${File}`;
 type PositionArray = [Rank, File];
 type Direction = [RankDirection, FileDirection]; // Direction Vector
 
-enum Piece {
+export enum Piece {
     WHITE_PAWN,
     WHITE_ROOK,
     WHITE_KNIGHT,
@@ -21,7 +22,7 @@ enum Piece {
     BLACK_KNIGHT,
     BLACK_BISHOP,
     BLACK_QUEEN,
-    BLACK_KING,
+    BLACK_KING
 };
 enum Color {
     WHITE,
@@ -62,7 +63,7 @@ const captured: Record<Color, Piece[]> = {
 
 chessModule.command("chess", async (ctx: CommandContext<Context>): Promise<void> => {
     generatePieces();
-    await ctx.reply(`***Chess***\n\nMaterial: ${getMaterial(!!Color.BLACK)}\n${renderCaptured(!!Color.BLACK)}\n${renderChess()}Material: ${getMaterial(!!Color.WHITE)}\n${renderCaptured(!!Color.WHITE)}\n\nSelected: ${focusPos === undefined ? "None" : positionToAlgebraicNotation(focusPos)}`, { reply_markup: updateKeyboard(), parse_mode: "Markdown" });
+    await ctx.replyWithPhoto(new InputFile(await generateImage(board)), { caption: `***Chess***\n\nMaterial: ${getMaterial(!!Color.BLACK)}\n${renderCaptured(!!Color.BLACK)}\n${renderChess()}Material: ${getMaterial(!!Color.WHITE)}\n${renderCaptured(!!Color.WHITE)}\n\nSelected: ${focusPos === undefined ? "None" : positionToAlgebraicNotation(focusPos)}`, reply_markup: updateKeyboard(), parse_mode: "Markdown" });
 });
 
 chessModule.callbackQuery(new RegExp(`^${Callbacks.CHESS} ([0-${MAX_RANK_VALUE}],[0-${MAX_FILE_VALUE}])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
@@ -90,8 +91,8 @@ chessModule.callbackQuery(new RegExp(`^${Callbacks.CHESS} ([0-${MAX_RANK_VALUE}]
                 availablePos = [];
                 focusPiece(pos);
     }
-
-    await ctx.editMessageText(`***Chess***\n\nMaterial: ${getMaterial(!!Color.BLACK)}\n${renderCaptured(!!Color.BLACK)}\n${renderChess()}Material: ${getMaterial(!!Color.WHITE)}\n${renderCaptured(!!Color.WHITE)}\n\nSelected: ${focusPos === undefined ? "None" : positionToAlgebraicNotation(focusPos)}`, { reply_markup: updateKeyboard(), parse_mode: "Markdown" });
+   
+    await ctx.editMessageMedia(InputMediaBuilder.photo(new InputFile(await generateImage(board)), { caption: `***Chess***\n\nMaterial: ${getMaterial(!!Color.BLACK)}\n${renderCaptured(!!Color.BLACK)}\n${renderChess()}Material: ${getMaterial(!!Color.WHITE)}\n${renderCaptured(!!Color.WHITE)}\n\nSelected: ${focusPos === undefined ? "None" : positionToAlgebraicNotation(focusPos)}`, parse_mode: "Markdown" }), { reply_markup: updateKeyboard() });
 });
 
 // Select and highlight piece.

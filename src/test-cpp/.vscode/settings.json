@@ -4,5 +4,12 @@
         "**/*.rpa": true,
         "**/*.rpymc": true,
         "**/cache/": true
-    }
+    },
+    "terminal.integrated.profiles.windows": {
+        "MSYS2 UCRT64": {
+            "path": "C:\\msys64\\msys2_shell.cmd",
+            "args": ["-defterm", "-here", "-no-start", "-ucrt64"]
+        }
+    },
+    "terminal.integrated.defaultProfile.windows": "MSYS2 UCRT64"
 }

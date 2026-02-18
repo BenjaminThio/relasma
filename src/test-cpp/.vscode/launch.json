@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "name": "Debug App (CMake main preset)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/main/bin/App.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "Build Main",
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe"
+        },
+        {
+            "name": "Debug Current Test (CMake tests preset)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/tests/bin/${fileBasenameNoExtension}.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "Build Current Test",
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe"
+        }
+    ],
+    "version": "0.2.0"
+}

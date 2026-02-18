@@ -1,0 +1,14 @@
+[
+{
+  "directory": "C:/Users/User/Documents/javascript-typescript/relasma/src/test-cpp/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\18\\BUILDT~1\\VC\\Tools\\MSVC\\1450~1.357\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DApp_EXPORTS -DNAPI_DISABLE_CPP_EXCEPTIONS -DNAPI_VERSION=8 -DNDEBUG -IC:\\Users\\User\\Documents\\javascript-typescript\\relasma\\src\\test-cpp\\include -IC:\\Users\\User\\Documents\\javascript-typescript\\relasma\\src\\test-cpp\\third_party -IC:\\Users\\User\\.cmake-js\\node-x64\\v22.14.0\\include\\node -IC:\\Users\\User\\Documents\\javascript-typescript\\relasma\\node_modules\\node-addon-api /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++latest -MT /GL -O2 -arch:AVX2 -fp:fast -EHs-c- -GR- -Gw -Gy /FoCMakeFiles\\App.dir\\src\\addon.cpp.obj /FdCMakeFiles\\App.dir\\ /FS -c C:\\Users\\User\\Documents\\javascript-typescript\\relasma\\src\\test-cpp\\src\\addon.cpp",
+  "file": "C:/Users/User/Documents/javascript-typescript/relasma/src/test-cpp/src/addon.cpp",
+  "output": "CMakeFiles/App.dir/src/addon.cpp.obj"
+},
+{
+  "directory": "C:/Users/User/Documents/javascript-typescript/relasma/src/test-cpp/build",
+  "command": "C:\\PROGRA~2\\MICROS~3\\18\\BUILDT~1\\VC\\Tools\\MSVC\\1450~1.357\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DApp_EXPORTS -DNAPI_DISABLE_CPP_EXCEPTIONS -DNAPI_VERSION=8 -DNDEBUG -IC:\\Users\\User\\Documents\\javascript-typescript\\relasma\\src\\test-cpp\\include -IC:\\Users\\User\\Documents\\javascript-typescript\\relasma\\src\\test-cpp\\third_party -IC:\\Users\\User\\.cmake-js\\node-x64\\v22.14.0\\include\\node -IC:\\Users\\User\\Documents\\javascript-typescript\\relasma\\node_modules\\node-addon-api /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++latest -MT /GL -O2 -arch:AVX2 -fp:fast -EHs-c- -GR- -Gw -Gy /FoCMakeFiles\\App.dir\\C_\\Users\\User\\Documents\\javascript-typescript\\relasma\\node_modules\\cmake-js\\lib\\cpp\\win_delay_load_hook.cc.obj /FdCMakeFiles\\App.dir\\ /FS -c C:\\Users\\User\\Documents\\javascript-typescript\\relasma\\node_modules\\cmake-js\\lib\\cpp\\win_delay_load_hook.cc",
+  "file": "C:/Users/User/Documents/javascript-typescript/relasma/node_modules/cmake-js/lib/cpp/win_delay_load_hook.cc",
+  "output": "CMakeFiles/App.dir/C_/Users/User/Documents/javascript-typescript/relasma/node_modules/cmake-js/lib/cpp/win_delay_load_hook.cc.obj"
+}
+]

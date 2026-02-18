@@ -1,0 +1,96 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(App VERSION 0.1.0 LANGUAGES CXX)
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+option(ENABLE_WARNINGS "Enable compiler warnings" ON)
+option(BUILD_TESTS "Build unit tests" OFF)
+option(BUILD_APP "Build the main application executable" ON)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(Warnings OPTIONAL)
+
+file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/src/*.cpp"
+)
+list(FILTER CORE_SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
+
+if(CORE_SOURCES)
+    add_library(core ${CORE_SOURCES})
+
+    target_include_directories(core PUBLIC "${CMAKE_SOURCE_DIR}/include")
+    target_include_directories(core SYSTEM PUBLIC "${CMAKE_SOURCE_DIR}/third_party")
+    target_compile_features(core PUBLIC cxx_std_23)
+
+    if(ipo_supported AND CMAKE_BUILD_TYPE MATCHES "Release|MinSizeRel")
+        set_property(TARGET core PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
+
+    if(ENABLE_WARNINGS AND COMMAND set_project_warnings)
+        set_project_warnings(core)
+    endif()
+endif()
+
+if(BUILD_APP)
+    add_executable(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/src/main.cpp")
+
+    target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/include")
+    target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC "${CMAKE_SOURCE_DIR}/third_party")
+    target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
+
+    if(TARGET core)
+        target_link_libraries(${PROJECT_NAME} PRIVATE core)
+    endif()
+
+    if(ENABLE_WARNINGS AND COMMAND set_project_warnings)
+        set_project_warnings(${PROJECT_NAME})
+    endif()
+
+    if(ipo_supported AND CMAKE_BUILD_TYPE MATCHES "Release|MinSizeRel")
+        set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    elseif(ipo_supported)
+        set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+        # message(WARNING "LTO is not supported by this compiler/linker: ${ipo_error}")
+    endif()
+
+    if(CMAKE_BUILD_TYPE MATCHES "Release|MinSizeRel")
+        target_compile_options(${PROJECT_NAME} PRIVATE
+            -O3
+            -march=native
+            -ffast-math
+            -fno-exceptions
+            -fno-rtti
+            -ffunction-sections
+            -fdata-sections
+        )
+
+        target_compile_definitions(${PROJECT_NAME} PRIVATE
+            NDEBUG
+            JSON_NOEXCEPTION
+        )
+
+        if(UNIX OR MINGW)
+            target_link_options(${PROJECT_NAME} PRIVATE
+                -s
+                -Wl,--gc-sections
+            )
+        endif()
+
+        message(STATUS ">> SPEED BUILD DETECTED: -O3, -march=native, --fast-math, Stripped")
+    endif()
+endif()
+
+if(BUILD_TESTS)
+    add_subdirectory(tests)
+endif()

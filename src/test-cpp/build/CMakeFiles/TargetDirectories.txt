@@ -1,0 +1,3 @@
+C:/Users/User/Documents/javascript-typescript/relasma/src/test-cpp/build/CMakeFiles/App.dir
+C:/Users/User/Documents/javascript-typescript/relasma/src/test-cpp/build/CMakeFiles/edit_cache.dir
+C:/Users/User/Documents/javascript-typescript/relasma/src/test-cpp/build/CMakeFiles/rebuild_cache.dir
