@@ -41,7 +41,7 @@ export default async (req: VercelRequest, res: VercelResponse): Promise<void> =>
                     `📂 <b>Repo:</b> [${repoName}](${repoLink})\n` + 
                     `🍁 <n>Branch:</b> ${branch}\n` +
                     `👤 <b>Pusher:</b> ${pusher}\n\n` +
-                    `<b>Commits:</b>\n${escapeHTML(commitList)}\n\n` +
+                    `<b>Commits:</b>\n${commitList}\n\n` +
                     `<a href="${compareUrl}">🔗 View Changes</a>`, { parse_mode: "HTML" }
                 );
             else
