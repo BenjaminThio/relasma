@@ -16,9 +16,9 @@ export async function getChatId(): Promise<number | null> {
 }
 
 export async function setReportChatId(ctx: CommandContext<Context>) {
-    ctx.reply(`Setting Chat ID: \`${ctx.chat.id}\` as default chat to send Github report...`, { parse_mode: "Markdown" });
+    await ctx.reply(`Setting Chat ID: \`${ctx.chat.id}\` as default chat to send Github report...`, { parse_mode: "Markdown" });
     await updateChatId(ctx.chat.id);
-    ctx.reply(`✅ Chat ID: \`${ctx.chat.id}\` set`, { parse_mode: "Markdown" });
+    await ctx.reply(`✅ Chat ID: \`${ctx.chat.id}\` set`, { parse_mode: "Markdown" });
 }
 
 export default async (req: VercelRequest, res: VercelResponse): Promise<void> => {
