@@ -4,6 +4,7 @@ import { bot } from "../src/bot.js";
 import { collection, doc, getDoc, updateDoc } from "firebase/firestore";
 import db from "../utils/firebase-config.js";
 import { type CommandContext, Context } from "grammy";
+import { escapeHTML } from "bun";
 
 export async function updateChatId(chatId: number): Promise<void> {
     await updateDoc(doc(collection(db, "temp"), "report"), {
@@ -37,12 +38,12 @@ export default async (req: VercelRequest, res: VercelResponse): Promise<void> =>
 
             if (chatId)
                 await bot.api.sendMessage(chatId,
-                    "🚀New Commit Pushed!\n\n" +
-                    `📂 **Repo:** [${repoName}](${repoLink})\n` + 
-                    `🍁 **Branch:** ${branch}\n` +
-                    `👤 **Pusher:** ${pusher}\n\n` +
-                    `**Commits:**\n${commitList}\n\n` +
-                    `[🔗 View Changes](${compareUrl})`, { parse_mode: "Markdown" }
+                    "🚀 <b>New Commit Pushed!</b>\n\n" +
+                    `📂 <b>Repo:</b> [${repoName}](${repoLink})\n` + 
+                    `🍁 <n>Branch:</b> ${branch}\n` +
+                    `👤 <b>Pusher:</b> ${pusher}\n\n` +
+                    `<b>Commits:</b>\n${escapeHTML(commitList)}\n\n` +
+                    `<a href="${compareUrl}">🔗 View Changes</a>`, { parse_mode: "HTML" }
                 );
             else
                 console.error("Chat ID unset.");
