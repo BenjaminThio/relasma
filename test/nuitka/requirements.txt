@@ -1,0 +1,5 @@
+nuitka
+zstandard
+yt_dlp
+fastapi
+pydantic
