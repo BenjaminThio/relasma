@@ -1,8 +1,14 @@
 // ..\..\node_modules\.bin\cmake-js.exe compile -G "NMake Makefiles"
 #include <napi.h>
 
-#include <fcntl.h>
-#include <io.h>
+// #include <fcntl.h>
+// #include <io.h>
+#ifdef _WIN32
+    #include <io.h>
+    #include <fcntl.h>
+#else
+    #include <unistd.h>
+#endif
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
