@@ -6,7 +6,7 @@ import { Position, Piece } from "../chess/index.js";
 const module = new Composer();
 
 const require = createRequire(import.meta.url);
-const chessEngine = require("./build/App.node");
+const chessEngine = require("./build/Release/App.node");
 
 chessEngine.init(path.join(import.meta.dir, "sprites"));
 
