@@ -33,13 +33,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${NODE_ADDON_API_DIR}
 )
 
-# --- FIX 1: Safely isolate Windows-only link libraries ---
-if(MSVC)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_JS_LIB} delayimp.lib)
-else()
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_JS_LIB})
-endif()
-
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_JS_LIB} delayimp.lib)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
 
@@ -50,37 +44,22 @@ elseif(ipo_supported)
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES "Release|MinSizeRel")
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        -O2
+        -arch:AVX2
+        -fp:fast
+        -EHs-c-
+        -GR-
+        -Gw
+        -Gy
+    )
+
     target_compile_definitions(${PROJECT_NAME} PRIVATE NDEBUG)
 
-    # --- FIX 2 & 3: Split compiler/linker settings based on environment OS ---
-    if(MSVC)
-        message(STATUS ">> MSVC WINDOWS BUILD DETECTED")
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            -O2
-            -arch:AVX2
-            -fp:fast
-            -EHs-c-
-            -GR-
-            -Gw
-            -Gy
-        )
-        target_link_options(${PROJECT_NAME} PRIVATE
-            -OPT:REF
-            -OPT:ICF
-        )
-    else()
-        message(STATUS ">> LINUX/ARM64 GCC BUILD DETECTED")
-        # High-performance native compiler optimization switches for Linux/GCC
-        target_compile_options(${PROJECT_NAME} PRIVATE
-            -Ofast              # Maximum speed math optimizations
-            -fno-exceptions     # Disables overhead since NAPI exceptions are off
-            -fno-rtti           # Drops runtime type info overhead for cleaner binaries
-            -ffunction-sections # Packs functions cleanly for dead-code pruning
-            -fdata-sections     # Packs data structures cleanly
-        )
-        # Drops unused functions out of the binary to keep the engine lightning-fast
-        target_link_options(${PROJECT_NAME} PRIVATE
-            -Wl,--gc-sections
-        )
-    endif()
+    target_link_options(${PROJECT_NAME} PRIVATE
+        -OPT:REF
+        -OPT:ICF
+    )
+
+    message(STATUS ">> MSVC BUILD DETECTED")
 endif()
