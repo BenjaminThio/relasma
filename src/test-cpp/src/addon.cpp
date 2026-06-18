@@ -1,3 +1,4 @@
+// ..\..\node_modules\.bin\cmake-js.exe compile -G "NMake Makefiles"
 #include <napi.h>
 
 #include <fcntl.h>
@@ -151,14 +152,14 @@ Napi::Value Init(const Napi::CallbackInfo& info)
     Napi::Env env = info.Env();
     string base_path = info[0].As<Napi::String>().Utf8Value();
 
-    for (size_t y = 0; y < 8; ++y)
+    for (int y = 7; y >= 0; --y)
     {
         for (size_t x = 0; x < 8; ++x)
         {
             size_t x1 = x * PIXELS_PER_SIDE;
-            size_t y1 = y * PIXELS_PER_SIDE;
+            size_t y1 = (7 - y) * PIXELS_PER_SIDE;
 
-            if ((x + y) % 2 != 0)
+            if ((x + y) % 2 == 0) // even
                 img.draw_rect(x1, y1, x1 + PIXELS_PER_SIDE - 1, y1 + PIXELS_PER_SIDE - 1, { 128, 128, 128 });
         }
     }
@@ -191,7 +192,7 @@ Napi::Value Render(const Napi::CallbackInfo& info)
 
         sscanf(piece.c_str(), "%d,%d:%d", &x, &y, &id);
 
-        current_frame.overlay(*sprite_cache[id], x * PIXELS_PER_SIDE, y * PIXELS_PER_SIDE);
+        current_frame.overlay(*sprite_cache[id], x * PIXELS_PER_SIDE, (7 - y) * PIXELS_PER_SIDE);
     }
 
     int len;

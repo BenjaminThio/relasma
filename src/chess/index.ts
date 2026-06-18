@@ -1,5 +1,5 @@
 import { CallbackQueryContext, CommandContext, Composer, Context, InlineKeyboard, InputFile, InputMediaBuilder } from "grammy";
-import { Callbacks } from "../types.js";
+import { Callback } from "../types.js";
 import { generateImage } from "../test-cpp/index.js";
 
 type Rank = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -66,7 +66,7 @@ chessModule.command("chess", async (ctx: CommandContext<Context>): Promise<void>
     await ctx.replyWithPhoto(new InputFile(await generateImage(board)), { caption: `***Chess***\n\nMaterial: ${getMaterial(!!Color.BLACK)}\n${renderCaptured(!!Color.BLACK)}\n${renderChess()}Material: ${getMaterial(!!Color.WHITE)}\n${renderCaptured(!!Color.WHITE)}\n\nSelected: ${focusPos === undefined ? "None" : positionToAlgebraicNotation(focusPos)}`, reply_markup: updateKeyboard(), parse_mode: "Markdown" });
 });
 
-chessModule.callbackQuery(new RegExp(`^${Callbacks.CHESS} ([0-${MAX_RANK_VALUE}],[0-${MAX_FILE_VALUE}])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
+chessModule.callbackQuery(new RegExp(`^${Callback.CHESS} ([0-${MAX_RANK_VALUE}],[0-${MAX_FILE_VALUE}])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
     const pos: Position = ctx.match[1] as Position;
 
     switch (focusPos) {
@@ -103,28 +103,9 @@ function focusPiece(pos: Position) {
 
     if (isOccupied(pos)) {
         switch (board[pos]) {
-            case Piece.WHITE_PAWN: {
-                const y: File = Number(pos.split(',')[1]) as File;
-
-                switch (y) {
-                    case 6:
-                        move(pos, [0, -1], 2);
-                        break;
-                    default:
-                        move(pos, [0, -1], 1);
-                }
-                break;
-            }
+            case Piece.WHITE_PAWN:
             case Piece.BLACK_PAWN: {
-                const y: File = Number(pos.split(',')[1]) as File;
-
-                switch (y) {
-                    case 1:
-                        move(pos, [0, 1], 2);
-                        break;
-                    default:
-                        move(pos, [0, 1], 1);
-                }
+                movePawn(pos);
                 break;
             }
             case Piece.WHITE_ROOK:
@@ -146,6 +127,30 @@ function focusPiece(pos: Position) {
             case Piece.WHITE_KING:
             case Piece.BLACK_KING:
                 moveKing(pos);
+        }
+    }
+}
+
+function movePawn(pos: Position): void {
+    const positionArray: PositionArray = pos.split(',').map((coord: string) => Number(coord)) as PositionArray;
+    const x: Rank = positionArray[0];
+    const y: File = positionArray[1];
+    const initialY: File = isWhite(pos) ? 6 : 1;
+    const fileDirection: FileDirection = isWhite(pos) ? -1 : 1;
+
+    switch (y) {
+        case initialY:
+            move(pos, [0, fileDirection], 2);
+            break;
+        default:
+            move(pos, [0, fileDirection], 1);
+    }
+
+    for (const rankDirection of [1, -1] as RankDirection[])
+    {
+        if (`${x + rankDirection},${y + fileDirection}` in board)
+        {
+            move(pos, [rankDirection, fileDirection], 1);
         }
     }
 }
@@ -189,7 +194,7 @@ function moveKnight(pos: Position): void {
         `${x + 1},${y + 2}`,
         `${x + 2},${y + 1}`
     ] as Position[])
-        if (isEmpty(pos))
+        if (isEmpty(pos) || isBlack(pos))
             availablePos.push(pos);
 }
 
@@ -227,21 +232,21 @@ const isBlack = (pos: Position): boolean => board[pos] > 5;
 function updateKeyboard(): InlineKeyboard {
     const keyboard: InlineKeyboard = new InlineKeyboard();
 
-    for (let y: File = 0; y < MAX_FILE_VALUE; y++) {
+    for (let y: File = MAX_FILE_VALUE - 1 as File; y >= 0; y--) {
         for (let x: Rank = 0; x < MAX_RANK_VALUE; x++) {
             const pos: Position = `${x},${y}` as keyof typeof board;
 
             if (focusPos === pos || availablePos.includes(pos)) {
-                keyboard.text("🟩", `${Callbacks.CHESS} ${pos}`);
+                keyboard.text("🟩", `${Callback.CHESS} ${pos}`);
             } else if (isOccupied(pos)) {
-                keyboard.text(PIECES[board[pos]], `${Callbacks.CHESS} ${pos}`);
+                keyboard.text(PIECES[board[pos]], `${Callback.CHESS} ${pos}`);
             } else {
                 switch ((x + y) % 2) {
-                    case 0: // odd
-                        keyboard.text(WHITE, `${Callbacks.CHESS}`);
+                    case 0: // even
+                        keyboard.text(BLACK, `${Callback.CHESS}`);
                         break;
-                    default: // even
-                        keyboard.text(BLACK, `${Callbacks.CHESS}`);
+                    default: // odd
+                        keyboard.text(WHITE, `${Callback.CHESS}`);
                 }
             }
         }
@@ -254,14 +259,14 @@ function updateKeyboard(): InlineKeyboard {
 function generatePieces(): void {
     for (const y of [1, 6] as File[]) {
         for (let x: Rank = 0; x < MAX_RANK_VALUE; x++) {
-            board[`${x as Rank},${y}`] = y % 2 === 0 ? Piece.WHITE_PAWN : Piece.BLACK_PAWN;
+            board[`${x as Rank},${y}`] = y % 2 === 0 ? Piece.BLACK_PAWN : Piece.WHITE_PAWN;
         }
     }
 
     for (const y of [0, 7] as File[]) {
         for (let x: Rank = 0; x < 4; x++) {
-            board[`${x},${y}` as keyof typeof board] = x === 3 ? (y % 2 === 0 ? Piece.BLACK_QUEEN : Piece.WHITE_QUEEN) : (y % 2 === 0 ? 7 + x : x + 1);
-            board[`${7 - x},${y}` as keyof typeof board] = x === 3 ? (y % 2 === 0 ? Piece.BLACK_KING : Piece.WHITE_KING) : (y % 2 === 0 ? 7 + x : x + 1);
+            board[`${x},${y}` as keyof typeof board] = x === 3 ? (y % 2 === 0 ? Piece.WHITE_QUEEN : Piece.BLACK_QUEEN) : (y % 2 === 0 ? x + 1 : 7 + x);
+            board[`${7 - x},${y}` as keyof typeof board] = x === 3 ? (y % 2 === 0 ? Piece.WHITE_KING : Piece.BLACK_KING) : (y % 2 === 0 ? x + 1 : 7 + x);
         }
     }
 }
@@ -269,7 +274,7 @@ function generatePieces(): void {
 function renderChess(): string {
     let renderer: string = "";
 
-    for (let y: File = 0; y < MAX_FILE_VALUE; y++) {
+    for (let y: File = MAX_FILE_VALUE - 1 as File; y >= 0; y--) {
         for (let x: Rank = 0; x < MAX_RANK_VALUE; x++) {
             const pos: Position = `${x},${y}` as keyof typeof board;
 
@@ -277,11 +282,11 @@ function renderChess(): string {
                 renderer += PIECES[board[pos]];
             else {
                 switch ((x + y) % 2) {
-                    case 0: // odd
-                        renderer += WHITE;
-                        break;
-                    default: // even
+                    case 0: // even
                         renderer += BLACK;
+                        break;
+                    default: // odd
+                        renderer += WHITE;
                 }
             }
         }
@@ -310,7 +315,7 @@ function positionToAlgebraicNotation(pos: Position): string {
     const x: Rank = positionArray[0];
     const y: File = positionArray[1];
 
-    return `${numberToAlpha(x)}${y}`;
+    return `${numberToAlpha(x + 1)}${y + 1}`;
 }
 
 function numberToAlpha(n: number, isUpper: boolean = false): string {

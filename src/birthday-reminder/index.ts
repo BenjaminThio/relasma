@@ -1,5 +1,6 @@
-import { type CommandContext, Composer, Context } from "grammy";
-import { createNewBirthday } from "./database.js";
+import { Api, Bot, type CommandContext, Composer, Context, RawApi } from "grammy";
+import { BirthdayData, createNewBirthday, getTodayBirthdayDocs, updateBirthdayData } from "./database.js";
+import { DocumentData, QueryDocumentSnapshot, QuerySnapshot } from "firebase/firestore";
 
 const birthdayModule: Composer<Context> = new Composer();
 const SEPARATORS: string[] = ['/', '-', '.'];
@@ -70,7 +71,7 @@ birthdayModule.command("birthday", async (ctx: CommandContext<Context>): Promise
     const payload: string = ctx.match;
 
     if (payload === "") {
-        ctx.reply("/birthday <name> <date>");
+        ctx.reply("/birthday <date> <name>");
         return;
     }
 
@@ -80,7 +81,7 @@ birthdayModule.command("birthday", async (ctx: CommandContext<Context>): Promise
         if (params.length >= 2) {
             const birthday: Birthday = Birthday.tryParse(params[0]!);
 
-            params.slice(0, 1);
+            params.splice(0, 1);
 
             const name: string = params.join(' ');
             const today: Date = new Date();
@@ -95,15 +96,34 @@ birthdayModule.command("birthday", async (ctx: CommandContext<Context>): Promise
                 day: birthday.day,
                 month: birthday.month,
                 year: birthday.year,
-                remindYear: year
+                remindYear: birthday.year,
+                chatId: ctx.msg.chat.id
             });
             await ctx.reply(`Set birthday reminder: \`${remindDate.toDateString()}\` for \`${name}\``, { parse_mode: "Markdown" });
         } else
-            await ctx.reply("/birthday <name> <date>");
+            await ctx.reply("/birthday <date> <name>");
     }
     catch (err: unknown) {
         await ctx.reply(`Error:\n${err}`);
     }
 });
+
+export async function remindBirthday(bot: Bot<Context, Api<RawApi>>)
+{
+    const todayBirthdayDocs: QuerySnapshot<DocumentData, DocumentData> = await getTodayBirthdayDocs();
+
+    todayBirthdayDocs.forEach(async (doc: QueryDocumentSnapshot<DocumentData, DocumentData>) => {
+        const birthdayData: BirthdayData = doc.data() as BirthdayData;
+        const docId: string = doc.id;
+
+        birthdayData.remindYear += 1;
+        await updateBirthdayData(docId, birthdayData);
+        await bot.api.sendMessage(
+            birthdayData.chatId,
+            `🎂🎈 <b>HAPPY BIRTHDAY TO ${birthdayData.name.toUpperCase()}! 🎈🎂</b>\n\nToday is <b>${birthdayData.name}</b>'s sepcial day! Let's wish them an amazing day ahead! 🎉✨`,
+            { parse_mode: 'HTML' }
+        );
+    });
+}
 
 export default birthdayModule;

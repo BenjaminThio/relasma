@@ -1,21 +1,23 @@
 import { type CallbackQueryContext, type CommandContext, Composer, Context, InlineKeyboard } from "grammy";
-import { Callbacks, contains, Coord, Movement } from "../types.js";
+import { Callback, contains, Coord, Movement } from "../types.js";
 import { type SokobanGameData, createNewSokobanGame, deleteSokobanDoc, getSokobanGameData, updateSokobanGame, userExists } from "./database.js";
+import { SHOP_ITEMS } from '../shop/database.js';
+import { CategoryRecord, ensureShopDataInitialized, shops } from "../shop/index.js";
 
 const sokobanModule = new Composer();
 const HEIGHT: number = 5;
 const WIDTH: number = 7;
-const BACKGROUND: string = "⬜️";
-const BARRIER: string = "🟪";
-const PLAYER: string = "🥹";
-const BOX: string = "📦";
-const DESTINATION: string = "❌";
-const KEYBOARD: InlineKeyboard = new InlineKeyboard()
-    .text("⬆️", `${Callbacks.SOKOBAN} 0`).row()
-    .text("⬅️", `${Callbacks.SOKOBAN} 1`).text("🔄", `${Callbacks.SOKOBAN} 4`).text("➡️", `${Callbacks.SOKOBAN} 3`).row()
-    .text("⬇️", `${Callbacks.SOKOBAN} 2`);
+function constructKeyboard(userId: number): InlineKeyboard
+{
+    const KEYBOARD: InlineKeyboard = new InlineKeyboard()
+        .text("⬆️", `${Callback.SOKOBAN} ${userId} 0`).row()
+        .text("⬅️", `${Callback.SOKOBAN} ${userId} 1`).text("🔄", `${Callback.SOKOBAN} ${userId} 4`).text("➡️", `${Callback.SOKOBAN} ${userId} 3`).row()
+        .text("⬇️", `${Callback.SOKOBAN} ${userId} 2`);
 
-const games: Record<string, SokobanGameData> = {};
+    return KEYBOARD;
+}
+
+const games: Record<number, SokobanGameData> = {};
 
 const getGame = (userId: number): SokobanGameData => {
     const game: SokobanGameData | undefined = games[userId];
@@ -26,65 +28,90 @@ const getGame = (userId: number): SokobanGameData => {
         throw new Error(`Game not found.`);
 };
 
+async function ensureSokobanGameInitialized(userId: number): Promise<void>
+{
+    if (!(userId in games)) {
+        if (await userExists(userId)) {
+            games[userId] = await getSokobanGameData(userId);
+        } else {
+            games[userId] = reshuffle();
+            createNewSokobanGame(userId, getGame(userId));
+        }
+    }
+}
+
 sokobanModule.command("sokoban", async (ctx: CommandContext<Context>): Promise<void> => {
     if (ctx.from === undefined) {
         ctx.reply("`ctx.from` is undefined.");
         return;
     }
 
-    if (!(ctx.from.id in games)) {
-        if (await userExists(ctx.from.id)) {
-            games[ctx.from.id] = await getSokobanGameData(ctx.from.id);
-        } else {
-            games[ctx.from.id] = {
-                player: new Coord(0, 0),
-                boxes: [],
-                destinations: [],
-                barriers: []
-            };
+    const userId: number = ctx.from.id;
 
-            reshuffle(ctx.from.id);
-            createNewSokobanGame(ctx.from.id, getGame(ctx.from.id));
-        }
-    }
-    ctx.reply(renderMap(ctx.from.id), { reply_markup: KEYBOARD });
+    await ensureShopDataInitialized(userId);
+    await ensureSokobanGameInitialized(userId);
+
+    ctx.reply(renderSokobanMap(shops[userId].equippedSkins, getGame(userId)), { reply_markup: constructKeyboard(userId) });
 });
 
-sokobanModule.callbackQuery(new RegExp(`^${Callbacks.SOKOBAN} ([0-3])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
+sokobanModule.callbackQuery(new RegExp(`^${Callback.SOKOBAN} (\\d+) ([0-4])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
     if (ctx.from === undefined) {
         ctx.editMessageText("`ctx.from` is undefined.");
         return;
-    } 
+    }
 
-    const direction: Movement = parseInt((ctx.match as RegExpMatchArray)[1] as string);
+    const ownerId: number = Number(ctx.match[1]);
+    const userId: number = ctx.from.id;
+
+    if (ownerId !== userId)
+    {
+        await ctx.answerCallbackQuery({
+            text: 'This is not your property.',
+            show_alert: true
+        });
+    }
+
+    await ensureShopDataInitialized(userId);
+    await ensureSokobanGameInitialized(userId);
+
+    const direction: number /* Movement */ = Number(ctx.match[2]);
 
     switch (direction) {
         case Movement.UP:
-            movePlayer(ctx.from.id, 0, -1);
+            movePlayer(userId, 0, -1);
             break;
         case Movement.LEFT:
-            movePlayer(ctx.from.id, -1, 0);
+            movePlayer(userId, -1, 0);
             break;
         case Movement.DOWN:
-            movePlayer(ctx.from.id, 0, 1);
+            movePlayer(userId, 0, 1);
             break;
         case Movement.RIGHT:
-            movePlayer(ctx.from.id, 1, 0);
+            movePlayer(userId, 1, 0);
+            break;
+        case 4:
+            games[userId] = reshuffle();
     }
 
     ctx.answerCallbackQuery();
 
-    if (gameOver(ctx.from.id)) {
-        await ctx.editMessageText(`<b>Game Over!</b>\n${renderMap(ctx.from.id)}`, { parse_mode: "HTML" });
-        await deleteSokobanDoc(ctx.from.id);
+    if (gameOver(userId)) {
+        await ctx.editMessageText(`<b>Game Over!</b>\n${renderSokobanMap(shops[userId].equippedSkins, getGame(userId))}`, { parse_mode: "HTML" });
+        await deleteSokobanDoc(userId);
         return;
     }
 
-    await updateSokobanGame(ctx.from.id, getGame(ctx.from.id));
-    await ctx.editMessageText(renderMap(ctx.from.id), { reply_markup: KEYBOARD });
+    await updateSokobanGame(userId, getGame(userId));
+    await ctx.editMessageText(renderSokobanMap(shops[userId].equippedSkins, getGame(userId)), { reply_markup: constructKeyboard(userId) });
 });
 
-function reshuffle(userId: number): void {
+export function reshuffle(): SokobanGameData {
+    const gameData: SokobanGameData = {
+        player: new Coord(0, 0),
+        boxes: [],
+        destinations: [],
+        barriers: []
+    };
     const availableCoords: Coord[] = [];
 
     for (let y: number = 0; y < HEIGHT; y++) {
@@ -96,21 +123,23 @@ function reshuffle(userId: number): void {
     for (let i: number = 0; i < 3; i++) {
         const randomBoxIndex: number = Math.floor(Math.random() * availableCoords.length);
 
-        getGame(userId).boxes.push(availableCoords[randomBoxIndex]!);
+        gameData.boxes.push(availableCoords[randomBoxIndex]!);
         availableCoords.splice(randomBoxIndex, 1);
 
         const randomDstIndex: number = Math.floor(Math.random() * availableCoords.length);
 
-        getGame(userId).destinations.push(availableCoords[randomDstIndex]!);
+        gameData.destinations.push(availableCoords[randomDstIndex]!);
         availableCoords.splice(randomDstIndex, 1);
 
         const randomBarrierIndex: number = Math.floor(Math.random() * availableCoords.length);
 
-        getGame(userId).barriers.push(availableCoords[randomBarrierIndex]!);
+        gameData.barriers.push(availableCoords[randomBarrierIndex]!);
         availableCoords.splice(randomBarrierIndex, 1);
     }
 
-    getGame(userId).player = availableCoords[Math.floor(Math.random() * availableCoords.length)]!;
+    gameData.player = availableCoords[Math.floor(Math.random() * availableCoords.length)]!;
+
+    return gameData;
 }
 
 function movePlayer(userId: number, x: number, y: number): void {
@@ -175,29 +204,45 @@ function moveBox(userId: number, boxIndex: number, x: number, y: number): Coord 
         return new Coord(xCoord, yCoord);
 }
 
-function renderMap(userId: number): string {
+const getBackgroundSkin = (skins: CategoryRecord<number>): string => {
+    return SHOP_ITEMS[Callback.SOKOBAN].background[skins[Callback.SOKOBAN].background];
+};
+const getBarrierSkin = (skins: CategoryRecord<number>): string => {
+    return SHOP_ITEMS[Callback.SOKOBAN].barrier[skins[Callback.SOKOBAN].barrier];
+};
+const getPlayerSkin = (skins: CategoryRecord<number>): string => {
+    return SHOP_ITEMS[Callback.SOKOBAN].player[skins[Callback.SOKOBAN].player];
+};
+const getBoxSkin = (skins: CategoryRecord<number>): string => {
+    return SHOP_ITEMS[Callback.SOKOBAN].box[skins[Callback.SOKOBAN].box];
+};
+const getDestinationSkin = (skins: CategoryRecord<number>): string => {
+    return SHOP_ITEMS[Callback.SOKOBAN].destination[skins[Callback.SOKOBAN].destination];
+};
+
+export function renderSokobanMap(skins: CategoryRecord<number>, gameData: SokobanGameData): string {
     let renderer: string = "";
 
-    renderer += `${BARRIER.repeat(WIDTH + 2)}\n${BARRIER}`;
+    renderer += `${getBarrierSkin(skins).repeat(WIDTH + 2)}\n${getBarrierSkin(skins)}`;
     for (let y: number = 0; y < HEIGHT; y++) {
         for (let x: number = 0; x < WIDTH; x++) {
-            if (getGame(userId).player.equals(new Coord(x, y)))
-                renderer += PLAYER;
-            else if (contains(getGame(userId).barriers, x, y) ||
-                    contains(getGame(userId).boxes, x, y) &&
-                    contains(getGame(userId).destinations, x, y)
+            if (gameData.player.equals(new Coord(x, y)))
+                renderer += getPlayerSkin(skins);
+            else if (contains(gameData.barriers, x, y) ||
+                    contains(gameData.boxes, x, y) &&
+                    contains(gameData.destinations, x, y)
                 )
-                renderer += BARRIER;
-            else if (contains(getGame(userId).boxes, x, y))
-                renderer += BOX;
-            else if (contains(getGame(userId).destinations, x, y))
-                renderer += DESTINATION;
+                renderer += getBarrierSkin(skins);
+            else if (contains(gameData.boxes, x, y))
+                renderer += getBoxSkin(skins);
+            else if (contains(gameData.destinations, x, y))
+                renderer += getDestinationSkin(skins);
             else
-                renderer += BACKGROUND;
+                renderer += getBackgroundSkin(skins);
         }
-        renderer += `${BARRIER}\n${BARRIER}`;
+        renderer += `${getBarrierSkin(skins)}\n${getBarrierSkin(skins)}`;
     }
-    renderer += `${BARRIER.repeat(WIDTH + 1)}`;
+    renderer += `${getBarrierSkin(skins).repeat(WIDTH + 1)}`;
 
     return renderer;
 }

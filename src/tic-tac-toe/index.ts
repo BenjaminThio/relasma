@@ -1,10 +1,10 @@
 import { type CallbackQueryContext, type CommandContext, Composer, Context, InlineKeyboard } from "grammy";
-import { Callbacks } from "../types.js";
+import { Callback } from "../types.js";
 import { type TicTacToeData, createNewTicTacToe, deleteTicTacToeDoc, getTicTacToeData, updateTicTacToe, userExists } from "./database.js";
 
 const ticTacToeModule: Composer<Context> = new Composer();
 const MARKS: string[] = ["❌", "⭕️"];
-const games: Record<string, TicTacToeData> = {};
+const games: Record<number, TicTacToeData> = {};
 
 const getGame = (userId: number): TicTacToeData => {
     const game: TicTacToeData | undefined = games[userId];
@@ -15,58 +15,86 @@ const getGame = (userId: number): TicTacToeData => {
         throw new Error("Game not found.");
 };
 
+async function ensureTicTacToeGameInitialized(userId: number): Promise<void>
+{
+    if (!(userId in games)) {
+        if (await userExists(userId)) {
+            games[userId] = await getTicTacToeData(userId);
+        } else {
+            games[userId] = {
+                board: new Array(9).fill(null),
+                player: false
+            };
+
+            createNewTicTacToe(userId, getGame(userId));
+        }
+    }
+}
+
 ticTacToeModule.command("tictactoe", async (ctx: CommandContext<Context>): Promise<void> => {
     if (ctx.from === undefined) {
         ctx.reply("`ctx.from` is undefined.");
         return;
     }
 
-    if (!(ctx.from.id in games)) {
-        if (await userExists(ctx.from.id)) {
-            games[ctx.from.id] = await getTicTacToeData(ctx.from.id);
-        } else {
-            games[ctx.from.id] = {
-                board: new Array(9).fill(null),
-                player: false
-            };
+    const userId: number = ctx.from.id;
 
-            createNewTicTacToe(ctx.from.id, getGame(ctx.from.id));
-        }
-    }
-    ctx.reply("Tic Tac Toe", { reply_markup: renderKeyboard(ctx.from.id) });
+    await ensureTicTacToeGameInitialized(userId);
+
+    ctx.reply("Tic Tac Toe", { reply_markup: constructKeyboard(userId) });
 });
 
-ticTacToeModule.callbackQuery(new RegExp(`^${Callbacks.TIC_TAC_TOE} ([0-8])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
-    const idx: number = parseInt(ctx.match[1] as string);
+ticTacToeModule.callbackQuery(new RegExp(`^${Callback.TIC_TAC_TOE} (\\d+) ([0-8])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
+    if (ctx.from === undefined)
+    {
+        console.error('`ctx.from` is undefined.');
+        return;
+    }
+
+    const ownerId: number = Number(ctx.match[1]);
+    const userId: number = ctx.from.id;
+
+    if (ownerId !== userId)
+    {
+        await ctx.answerCallbackQuery({
+            text: 'This is not your property.',
+            show_alert: true
+        });
+        return;
+    }
+
+    await ensureTicTacToeGameInitialized(userId);
+
+    const idx: number = Number(ctx.match[2]);
 
     ctx.answerCallbackQuery();
 
-    switch (getGame(ctx.from.id).board[idx]) {
+    switch (getGame(userId).board[idx]) {
         case null:
-            getGame(ctx.from.id).board[idx] = getGame(ctx.from.id).player;
-            if (gameOver(ctx.from.id)) {
-                await ctx.editMessageText(`Tic Tac Toe\nGame Over! Player \`${+getGame(ctx.from.id).player + 1}\` wins.`, { reply_markup: renderKeyboard(ctx.from.id), parse_mode: "Markdown" });
-                await deleteTicTacToeDoc(ctx.from.id);
-                delete games[ctx.from.id];
+            getGame(userId).board[idx] = getGame(userId).player;
+            if (gameOver(userId)) {
+                await ctx.editMessageText(`Tic Tac Toe\nGame Over! Player \`${+getGame(userId).player + 1}\` wins.`, { reply_markup: constructKeyboard(userId), parse_mode: "Markdown" });
+                await deleteTicTacToeDoc(userId);
+                delete games[userId];
                 return;
-            } else if (!getGame(ctx.from.id).board.some((mark: (boolean | null)) => mark === null)) {
-                await ctx.editMessageText(`Tic Tac Toe\nGame Over! It's a tie.`, { reply_markup: renderKeyboard(ctx.from.id) });
-                await deleteTicTacToeDoc(ctx.from.id);
-                delete games[ctx.from.id];
+            } else if (!getGame(userId).board.some((mark: (boolean | null)) => mark === null)) {
+                await ctx.editMessageText(`Tic Tac Toe\nGame Over! It's a tie.`, { reply_markup: constructKeyboard(userId) });
+                await deleteTicTacToeDoc(userId);
+                delete games[userId];
                 return;
             }
-            getGame(ctx.from.id).player = !getGame(ctx.from.id).player;
-            await updateTicTacToe(ctx.from.id, getGame(ctx.from.id));
-            await ctx.editMessageText("Tic Tac Toe", { reply_markup: renderKeyboard(ctx.from.id) });
+            getGame(userId).player = !getGame(userId).player;
+            await updateTicTacToe(userId, getGame(userId));
+            await ctx.editMessageText("Tic Tac Toe", { reply_markup: constructKeyboard(userId) });
     }
 });
 
-function renderKeyboard(userId: number): InlineKeyboard {
+function constructKeyboard(userId: number): InlineKeyboard {
     const keyboard: InlineKeyboard = new InlineKeyboard();
     let counter: number = 1;
 
     for (let i: number = 0; i < 9; i++, counter++) {
-        keyboard.text(getGame(userId).board[i] === null ? " " : MARKS[+(getGame(userId).board[i] as boolean)] as string, `${Callbacks.TIC_TAC_TOE} ${i}`);
+        keyboard.text(getGame(userId).board[i] === null ? " " : MARKS[+(getGame(userId).board[i] as boolean)] as string, `${Callback.TIC_TAC_TOE} ${userId} ${i}`);
 
         if (counter === 3) {
             keyboard.row();

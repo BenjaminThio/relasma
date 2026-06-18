@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from "bun";
 //import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 import { readdir } from "node:fs/promises";
+import { remindBirthday } from "./birthday-reminder/index.js";
 
 type CommandModule = { default: Composer<Context> }
 
@@ -19,5 +20,9 @@ for (const file of await readdir(__dirname, { withFileTypes: true })) {
         bot.use(mod.default);
     }
 }
+
+setInterval(async () => {
+    await remindBirthday(bot);
+}, 1000);
 
 bot.start();

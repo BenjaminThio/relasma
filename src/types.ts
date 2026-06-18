@@ -27,10 +27,12 @@ export enum Movement {
     RIGHT
 }
 
-export enum Callbacks {
+export enum Callback {
     SNAKE,
     SOKOBAN,
     CALCULATOR,
     TIC_TAC_TOE,
-    CHESS
+    CHESS,
+    SHOP,
+    DELETE
 }

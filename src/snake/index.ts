@@ -1,19 +1,12 @@
 import { type CallbackQueryContext, type CommandContext, Context, InlineKeyboard, Composer } from "grammy";
 import { type SnakeGameData, createNewSnakeGame, deleteSnakeDoc, getSnakeGameData, updateSnakeGame, userExists } from "./database.js";
-import { Movement, Coord, contains, Callbacks } from "../types.js";
+import { Movement, Coord, contains, Callback } from "../types.js";
+import { SHOP_ITEMS } from "../shop/database.js";
+import { CategoryRecord, ensureShopDataInitialized, shops } from "../shop/index.js";
 
 const snakeModule = new Composer();
 const HEIGHT: number = 10;
 const WIDTH: number = 10;
-const BACKGROUND: string = "⬜️";
-const BARRIER: string = "🟨";
-const HEAD: string = "😳";
-const BODY: string = "🟡";
-const FOOD: string = "🍎";
-const KEYBOARD: InlineKeyboard = new InlineKeyboard()
-    .text("⬆️", `${Callbacks.SNAKE} ${Movement.UP}`).row()
-    .text("⬅️", `${Callbacks.SNAKE} ${Movement.LEFT}`).text("🔄", `${Callbacks.SNAKE} 4`).text("➡️", `${Callbacks.SNAKE} ${Movement.RIGHT}`).row()
-    .text("⬇️", `${Callbacks.SNAKE} ${Movement.DOWN}`);
 const games: Record<number, SnakeGameData> = {};
 const getHead = (userId: number) => getGame(userId).parts[0]!;
 const getBody = (userId: number) => getGame(userId).parts.slice(1);
@@ -27,6 +20,38 @@ const getGame = (userId: number) => {
         throw new Error("Game not found!");
 };
 
+async function ensureSnakeGameDataInitialized(userId: number): Promise<void>
+{
+    if (!(userId in games)) {
+        if (await userExists(userId)) {
+            games[userId] = await getSnakeGameData(userId);
+        } else {
+            reshuffle(userId);
+            await createNewSnakeGame(userId, getGame(userId));
+        }
+    }
+}
+
+function constructKeyboard(userId: number): InlineKeyboard
+{
+    const KEYBOARD: InlineKeyboard = new InlineKeyboard()
+        .text("⬆️", `${Callback.SNAKE} ${userId} ${Movement.UP}`).row()
+        .text("⬅️", `${Callback.SNAKE} ${userId} ${Movement.LEFT}`).text("🔄", `${Callback.SNAKE} ${userId} 4`).text("➡️", `${Callback.SNAKE} ${userId} ${Movement.RIGHT}`).row()
+        .text("⬇️", `${Callback.SNAKE} ${userId} ${Movement.DOWN}`);
+
+    return KEYBOARD;
+}
+
+function reshuffle(userId: number): void
+{
+    games[userId] = {
+        parts: [],
+        foodCoord: new Coord(0, 0),
+    };
+    getGame(userId).parts = [new Coord(Math.floor(Math.random() * WIDTH), Math.floor(Math.random() * HEIGHT))];
+    generateFood(userId);
+}
+
 snakeModule.command("snake", async (ctx: CommandContext<Context>): Promise<void> => {
     if (!ctx.from) {
         ctx.reply("`ctx.from` is undefined.");
@@ -35,24 +60,27 @@ snakeModule.command("snake", async (ctx: CommandContext<Context>): Promise<void>
 
     const userId: number = ctx.from.id;
 
-    if (!(userId in games)) {
-        if (await userExists(userId)) {
-            games[userId] = await getSnakeGameData(userId);
-        } else {
-            games[userId] = {
-                parts: [],
-                foodCoord: new Coord(0, 0),
-            };
-            getGame(userId).parts = [new Coord(Math.floor(Math.random() * WIDTH), Math.floor(Math.random() * HEIGHT))];
-            generateFood(userId);
-            await createNewSnakeGame(userId, getGame(userId));
-        }
-    }
-    await ctx.reply(renderMap(userId), {reply_markup: KEYBOARD});
+    await ensureShopDataInitialized(userId);
+    await ensureSnakeGameDataInitialized(userId);
+    await ctx.reply(renderSnakeMap(shops[userId].equippedSkins, getGame(userId)), {reply_markup: constructKeyboard(userId)});
 });
 
-snakeModule.callbackQuery(new RegExp(`^${Callbacks.SNAKE} ([0-3])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
-    const direction: Movement = Number(ctx.match[1]);
+snakeModule.callbackQuery(new RegExp(`^${Callback.SNAKE} (\\d+) ([0-4])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
+    const ownerId: number = Number(ctx.match[1]);
+    const direction: number /* Movement */ = Number(ctx.match[2]);
+    const userId: number = ctx.from.id;
+
+    if (ownerId !== userId)
+    {
+        await ctx.answerCallbackQuery({
+            text: 'This is not your property.',
+            show_alert: true
+        });
+        return;
+    }
+
+    await ensureShopDataInitialized(userId);
+    await ensureSnakeGameDataInitialized(userId);
 
     switch (direction) {
         case Movement.UP:
@@ -66,6 +94,11 @@ snakeModule.callbackQuery(new RegExp(`^${Callbacks.SNAKE} ([0-3])$`), async (ctx
             break;
         case Movement.RIGHT:
             await move(ctx, 1, 0);
+            break;
+        case 4:
+            reshuffle(userId);
+            await updateSnakeGame(userId, getGame(userId));
+            await ctx.editMessageText(renderSnakeMap(shops[userId].equippedSkins, getGame(userId)), {reply_markup: constructKeyboard(userId)});
     }
 });
 
@@ -99,13 +132,13 @@ async function move(ctx: CallbackQueryContext<Context>, x: number, y: number) {
 
     if (getHead(userId).equals(getGame(userId).foodCoord)) {
         if (generateFood(userId) === 0) {
-            await ctx.editMessageText(`<b>Game Over!</b>\n${renderMap(userId)}`, { parse_mode: "HTML" });
+            await ctx.editMessageText(`<b>Game Over!</b>\n${renderSnakeMap(shops[userId].equippedSkins, getGame(userId))}`, { parse_mode: "HTML" });
             await deleteSnakeDoc(userId);
             delete games[userId];
             return;
         }
     } else if (contains(getBody(userId), getHead(userId))) {
-        await ctx.editMessageText(`<b>Game Over!\nScore: ${getGame(userId).parts.length - 1}</b>\n${renderMap(userId)}`, { parse_mode: "HTML" });
+        await ctx.editMessageText(`<b>Game Over!\nScore: ${getGame(userId).parts.length - 1}</b>\n${renderSnakeMap(shops[userId].equippedSkins, getGame(userId))}`, { parse_mode: "HTML" });
         await deleteSnakeDoc(userId);
         delete games[userId];
         return;
@@ -113,27 +146,43 @@ async function move(ctx: CallbackQueryContext<Context>, x: number, y: number) {
         getGame(userId).parts.pop();
 
     await updateSnakeGame(userId, getGame(userId));
-    await ctx.editMessageText(renderMap(userId), {reply_markup: KEYBOARD});
+    await ctx.editMessageText(renderSnakeMap(shops[userId].equippedSkins, getGame(userId)), {reply_markup: constructKeyboard(userId)});
 }
 
-function renderMap(userId: number): string {
+function getBackgroundSkin(skins: CategoryRecord<number>): string {
+    return SHOP_ITEMS[Callback.SNAKE].background[skins[Callback.SNAKE].background];
+}
+function getBarrierSkin(skins: CategoryRecord<number>): string {
+    return SHOP_ITEMS[Callback.SNAKE].barrier[skins[Callback.SNAKE].barrier];
+}
+function getHeadSkin(skins: CategoryRecord<number>): string {
+    return SHOP_ITEMS[Callback.SNAKE].head[skins[Callback.SNAKE].head];
+}
+function getBodySkin(skins: CategoryRecord<number>): string {
+    return SHOP_ITEMS[Callback.SNAKE].body[skins[Callback.SNAKE].body];
+}
+function getFoodSkin(skins: CategoryRecord<number>): string {
+    return SHOP_ITEMS[Callback.SNAKE].food[skins[Callback.SNAKE].food];
+}
+
+export function renderSnakeMap(skins: CategoryRecord<number>, gameData: SnakeGameData): string {
     let renderer: string = "";
 
-    renderer += `${BARRIER.repeat(WIDTH + 2)}\n${BARRIER}`;
+    renderer += `${getBarrierSkin(skins).repeat(WIDTH + 2)}\n${getBarrierSkin(skins)}`;
     for (let y: number = 0; y < HEIGHT; y++) {
         for (let x: number = 0; x < WIDTH; x++) {
-            if (getHead(userId).equals(new Coord(x, y)))
-                renderer += HEAD;
-            else if (contains(getGame(userId).parts, x, y))
-                renderer += BODY;
-            else if (getGame(userId).foodCoord.equals(new Coord(x, y)))
-                renderer += FOOD;
+            if (gameData.parts[0].equals(new Coord(x, y)))
+                renderer += getHeadSkin(skins);
+            else if (contains(gameData.parts, x, y))
+                renderer += getBodySkin(skins);
+            else if (gameData.foodCoord.equals(new Coord(x, y)))
+                renderer += getFoodSkin(skins);
             else
-                renderer += BACKGROUND;
+                renderer += getBackgroundSkin(skins);
         }
-        renderer += `${BARRIER}\n${BARRIER}`;
+        renderer += `${getBarrierSkin(skins)}\n${getBarrierSkin(skins)}`;
     }
-    renderer += BARRIER.repeat(WIDTH + 1);
+    renderer += getBarrierSkin(skins).repeat(WIDTH + 1);
 
     return renderer;
 }

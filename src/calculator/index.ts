@@ -1,31 +1,37 @@
 import { type CallbackQueryContext, type CommandContext, Composer, Context, InlineKeyboard } from "grammy";
 import { type CalculatorData, createNewCalculator, getCalculatorData, updateCalculator, userExists } from "./database.js";
-import { Callbacks } from "../types.js";
+import { Callback } from "../types.js";
 
 const calculatorModule: Composer<Context> = new Composer();
-const BASIC: InlineKeyboard = new InlineKeyboard()
-    .text("©️", `${Callbacks.CALCULATOR} 10`).text("🔙", `${Callbacks.CALCULATOR} 11`).text("%", `${Callbacks.CALCULATOR} 12`).text("➗", `${Callbacks.CALCULATOR} 13`).row()
-    .text("7️⃣", `${Callbacks.CALCULATOR} 7`).text("8️⃣", `${Callbacks.CALCULATOR} 8`).text("9️⃣", `${Callbacks.CALCULATOR} 9`).text("✖️", `${Callbacks.CALCULATOR} 14`).row()
-    .text("4️⃣", `${Callbacks.CALCULATOR} 4`).text("5️⃣", `${Callbacks.CALCULATOR} 5`).text("6️⃣", `${Callbacks.CALCULATOR} 6`).text("➖", `${Callbacks.CALCULATOR} 15`).row()
-    .text("1️⃣", `${Callbacks.CALCULATOR} 1`).text("2️⃣", `${Callbacks.CALCULATOR} 2`).text("3️⃣", `${Callbacks.CALCULATOR} 3`).text("➕", `${Callbacks.CALCULATOR} 16`).row()
-    .text("🔄", `${Callbacks.CALCULATOR} 17`).text("0️⃣", `${Callbacks.CALCULATOR} 0`).text("⏺️", `${Callbacks.CALCULATOR} 18`).text("✔️", `${Callbacks.CALCULATOR} 19`);
-const SCIENTIFIC: InlineKeyboard = new InlineKeyboard()
-    .text("2nd", `${Callbacks.CALCULATOR} 20`).text("🚫", `${Callbacks.CALCULATOR} 21`).text("sin", `${Callbacks.CALCULATOR} 22`).text("cos", `${Callbacks.CALCULATOR} 23`).text("tan", `${Callbacks.CALCULATOR} 24`).row()
-    .text("^", `${Callbacks.CALCULATOR} 25`).text("lg", `${Callbacks.CALCULATOR} 26`).text("ln", `${Callbacks.CALCULATOR} 27`).text("(", `${Callbacks.CALCULATOR} 28`).text(")", `${Callbacks.CALCULATOR} 29`).row()
-    .text("√", `${Callbacks.CALCULATOR} 30`).text("©️", `${Callbacks.CALCULATOR} 10`).text("🔙", `${Callbacks.CALCULATOR} 11`).text("%", `${Callbacks.CALCULATOR} 12`).text("➗", `${Callbacks.CALCULATOR} 13`).row()
-    .text("❕", `${Callbacks.CALCULATOR} 31`).text("7️⃣", `${Callbacks.CALCULATOR} 7`).text("8️⃣", `${Callbacks.CALCULATOR} 8`).text("9️⃣", `${Callbacks.CALCULATOR} 9`).text("✖️", `${Callbacks.CALCULATOR} 14`).row()
-    .text("⁻¹", `${Callbacks.CALCULATOR} 32`).text("4️⃣", `${Callbacks.CALCULATOR} 4`).text("5️⃣", `${Callbacks.CALCULATOR} 5`).text("6️⃣", `${Callbacks.CALCULATOR} 6`).text("➖", `${Callbacks.CALCULATOR} 15`).row()
-    .text("π", `${Callbacks.CALCULATOR} 33`).text("1️⃣", `${Callbacks.CALCULATOR} 1`).text("2️⃣", `${Callbacks.CALCULATOR} 2`).text("3️⃣", `${Callbacks.CALCULATOR} 3`).text("➕", `${Callbacks.CALCULATOR} 16`).row()
-    .text("🔄", `${Callbacks.CALCULATOR} 17`).text("e", `${Callbacks.CALCULATOR} 34`).text("0️⃣", `${Callbacks.CALCULATOR} 0`).text("⏺️", `${Callbacks.CALCULATOR} 18`).text("✔️", `${Callbacks.CALCULATOR} 19`);
-const INV_SCIENTIFIC: InlineKeyboard = new InlineKeyboard()
-    .text("2nd", `${Callbacks.CALCULATOR} 20`).text("🚫", `${Callbacks.CALCULATOR} 21`).text("sin⁻¹", `${Callbacks.CALCULATOR} 35`).text("cos⁻¹", `${Callbacks.CALCULATOR} 36`).text("tan⁻¹", `${Callbacks.CALCULATOR} 37`).row()
-    .text("^", `${Callbacks.CALCULATOR} 25`).text("lg", `${Callbacks.CALCULATOR} 26`).text("ln", `${Callbacks.CALCULATOR} 27`).text("(", `${Callbacks.CALCULATOR} 28`).text(")", `${Callbacks.CALCULATOR} 29`).row()
-    .text("√", `${Callbacks.CALCULATOR} 30`).text("©️", `${Callbacks.CALCULATOR} 10`).text("🔙", `${Callbacks.CALCULATOR} 11`).text("%", `${Callbacks.CALCULATOR} 12`).text("➗", `${Callbacks.CALCULATOR} 13`).row()
-    .text("❕", `${Callbacks.CALCULATOR} 31`).text("7️⃣", `${Callbacks.CALCULATOR} 7`).text("8️⃣", `${Callbacks.CALCULATOR} 8`).text("9️⃣", `${Callbacks.CALCULATOR} 9`).text("✖️", `${Callbacks.CALCULATOR} 14`).row()
-    .text("⁻¹", `${Callbacks.CALCULATOR} 32`).text("4️⃣", `${Callbacks.CALCULATOR} 4`).text("5️⃣", `${Callbacks.CALCULATOR} 5`).text("6️⃣", `${Callbacks.CALCULATOR} 6`).text("➖", `${Callbacks.CALCULATOR} 15`).row()
-    .text("π", `${Callbacks.CALCULATOR} 33`).text("1️⃣", `${Callbacks.CALCULATOR} 1`).text("2️⃣", `${Callbacks.CALCULATOR} 2`).text("3️⃣", `${Callbacks.CALCULATOR} 3`).text("➕", `${Callbacks.CALCULATOR} 16`).row()
-    .text("🔄", `${Callbacks.CALCULATOR} 17`).text("e", `${Callbacks.CALCULATOR} 34`).text("0️⃣", `${Callbacks.CALCULATOR} 0`).text("⏺️", `${Callbacks.CALCULATOR} 18`).text("✔️", `${Callbacks.CALCULATOR} 19`);
-export enum Keys {
+function constructKeyboard(userId: number): InlineKeyboard
+{
+    const BASIC: InlineKeyboard = new InlineKeyboard()
+        .text("©️", `${Callback.CALCULATOR} ${userId} 10`).text("🔙", `${Callback.CALCULATOR} ${userId} 11`).text("%", `${Callback.CALCULATOR} ${userId} 12`).text("➗", `${Callback.CALCULATOR} ${userId} 13`).row()
+        .text("7️⃣", `${Callback.CALCULATOR} ${userId} 7`).text("8️⃣", `${Callback.CALCULATOR} ${userId} 8`).text("9️⃣", `${Callback.CALCULATOR} ${userId} 9`).text("✖️", `${Callback.CALCULATOR} ${userId} 14`).row()
+        .text("4️⃣", `${Callback.CALCULATOR} ${userId} 4`).text("5️⃣", `${Callback.CALCULATOR} ${userId} 5`).text("6️⃣", `${Callback.CALCULATOR} ${userId} 6`).text("➖", `${Callback.CALCULATOR} ${userId} 15`).row()
+        .text("1️⃣", `${Callback.CALCULATOR} ${userId} 1`).text("2️⃣", `${Callback.CALCULATOR} ${userId} 2`).text("3️⃣", `${Callback.CALCULATOR} ${userId} 3`).text("➕", `${Callback.CALCULATOR} ${userId} 16`).row()
+        .text("🔄", `${Callback.CALCULATOR} ${userId} 17`).text("0️⃣", `${Callback.CALCULATOR} ${userId} 0`).text("⏺️", `${Callback.CALCULATOR} ${userId} 18`).text("✔️", `${Callback.CALCULATOR} ${userId} 19`);
+    const SCIENTIFIC: InlineKeyboard = new InlineKeyboard()
+        .text("2nd", `${Callback.CALCULATOR} ${userId} 20`).text("🚫", `${Callback.CALCULATOR} ${userId} 21`).text("sin", `${Callback.CALCULATOR} ${userId} 22`).text("cos", `${Callback.CALCULATOR} ${userId} 23`).text("tan", `${Callback.CALCULATOR} ${userId} 24`).row()
+        .text("^", `${Callback.CALCULATOR} ${userId} 25`).text("lg", `${Callback.CALCULATOR} ${userId} 26`).text("ln", `${Callback.CALCULATOR} ${userId} 27`).text("(", `${Callback.CALCULATOR} ${userId} 28`).text(")", `${Callback.CALCULATOR} ${userId} 29`).row()
+        .text("√", `${Callback.CALCULATOR} ${userId} 30`).text("©️", `${Callback.CALCULATOR} ${userId} 10`).text("🔙", `${Callback.CALCULATOR} ${userId} 11`).text("%", `${Callback.CALCULATOR} ${userId} 12`).text("➗", `${Callback.CALCULATOR} ${userId} 13`).row()
+        .text("❕", `${Callback.CALCULATOR} ${userId} 31`).text("7️⃣", `${Callback.CALCULATOR} ${userId} 7`).text("8️⃣", `${Callback.CALCULATOR} ${userId} 8`).text("9️⃣", `${Callback.CALCULATOR} ${userId} 9`).text("✖️", `${Callback.CALCULATOR} ${userId} 14`).row()
+        .text("⁻¹", `${Callback.CALCULATOR} ${userId} 32`).text("4️⃣", `${Callback.CALCULATOR} ${userId} 4`).text("5️⃣", `${Callback.CALCULATOR} ${userId} 5`).text("6️⃣", `${Callback.CALCULATOR} ${userId} 6`).text("➖", `${Callback.CALCULATOR} ${userId} 15`).row()
+        .text("π", `${Callback.CALCULATOR} ${userId} 33`).text("1️⃣", `${Callback.CALCULATOR} ${userId} 1`).text("2️⃣", `${Callback.CALCULATOR} ${userId} 2`).text("3️⃣", `${Callback.CALCULATOR} ${userId} 3`).text("➕", `${Callback.CALCULATOR} ${userId} 16`).row()
+        .text("🔄", `${Callback.CALCULATOR} ${userId} 17`).text("e", `${Callback.CALCULATOR} ${userId} 34`).text("0️⃣", `${Callback.CALCULATOR} ${userId} 0`).text("⏺️", `${Callback.CALCULATOR} ${userId} 18`).text("✔️", `${Callback.CALCULATOR} ${userId} 19`);
+    const INV_SCIENTIFIC: InlineKeyboard = new InlineKeyboard()
+        .text("2nd", `${Callback.CALCULATOR} ${userId} 20`).text("🚫", `${Callback.CALCULATOR} ${userId} 21`).text("sin⁻¹", `${Callback.CALCULATOR} ${userId} 35`).text("cos⁻¹", `${Callback.CALCULATOR} ${userId} 36`).text("tan⁻¹", `${Callback.CALCULATOR} ${userId} 37`).row()
+        .text("^", `${Callback.CALCULATOR} ${userId} 25`).text("lg", `${Callback.CALCULATOR} ${userId} 26`).text("ln", `${Callback.CALCULATOR} ${userId} 27`).text("(", `${Callback.CALCULATOR} ${userId} 28`).text(")", `${Callback.CALCULATOR} ${userId} 29`).row()
+        .text("√", `${Callback.CALCULATOR} ${userId} 30`).text("©️", `${Callback.CALCULATOR} ${userId} 10`).text("🔙", `${Callback.CALCULATOR} ${userId} 11`).text("%", `${Callback.CALCULATOR} ${userId} 12`).text("➗", `${Callback.CALCULATOR} ${userId} 13`).row()
+        .text("❕", `${Callback.CALCULATOR} ${userId} 31`).text("7️⃣", `${Callback.CALCULATOR} ${userId} 7`).text("8️⃣", `${Callback.CALCULATOR} ${userId} 8`).text("9️⃣", `${Callback.CALCULATOR} ${userId} 9`).text("✖️", `${Callback.CALCULATOR} ${userId} 14`).row()
+        .text("⁻¹", `${Callback.CALCULATOR} ${userId} 32`).text("4️⃣", `${Callback.CALCULATOR} ${userId} 4`).text("5️⃣", `${Callback.CALCULATOR} ${userId} 5`).text("6️⃣", `${Callback.CALCULATOR} ${userId} 6`).text("➖", `${Callback.CALCULATOR} ${userId} 15`).row()
+        .text("π", `${Callback.CALCULATOR} ${userId} 33`).text("1️⃣", `${Callback.CALCULATOR} ${userId} 1`).text("2️⃣", `${Callback.CALCULATOR} ${userId} 2`).text("3️⃣", `${Callback.CALCULATOR} ${userId} 3`).text("➕", `${Callback.CALCULATOR} ${userId} 16`).row()
+        .text("🔄", `${Callback.CALCULATOR} ${userId} 17`).text("e", `${Callback.CALCULATOR} ${userId} 34`).text("0️⃣", `${Callback.CALCULATOR} ${userId} 0`).text("⏺️", `${Callback.CALCULATOR} ${userId} 18`).text("✔️", `${Callback.CALCULATOR} ${userId} 19`);
+
+    return getCalculator(userId).scientific ? (getCalculator(userId).secondary ? INV_SCIENTIFIC : SCIENTIFIC) : BASIC;
+}
+
+export enum Key {
     ZERO,
     ONE,
     TWO,
@@ -65,10 +71,10 @@ export enum Keys {
     ARCCOSINE,
     ARCTANGENT
 }
-const calculators: Record<string, CalculatorData> = {};
+const calculators: Record<number, CalculatorData> = {};
 
 const getCalculator = (userId: number): CalculatorData => {
-    const calculator: CalculatorData | undefined = getCalculator(userId);
+    const calculator: CalculatorData | undefined = calculators[userId];
 
     if (calculator !== undefined)
         return calculator;
@@ -76,56 +82,78 @@ const getCalculator = (userId: number): CalculatorData => {
         throw new Error("Calculator not found.");
 };
 
-calculatorModule.command("cal", async (ctx: CommandContext<Context>): Promise<void> => {
-    if (ctx.from === undefined) {
-        ctx.reply("`ctx.from` is undefined.");
-        return;
-    }
-
-    if (!(ctx.from.id in calculators)) {
-        if (await userExists(ctx.from.id)) {
-            calculators[ctx.from.id] = await getCalculatorData(ctx.from.id);
+async function ensureCalculatorDataInitialized(userId: number)
+{
+    if (!(userId in calculators)) {
+        if (await userExists(userId)) {
+            calculators[userId] = await getCalculatorData(userId);
         } else {
-            calculators[ctx.from.id] = {
+            calculators[userId] = {
                 scientific: false,
                 secondary: false,
                 entries: [],
                 result: ""
             };
 
-            createNewCalculator(ctx.from.id, getCalculator(ctx.from.id));
+            createNewCalculator(userId, getCalculator(userId));
         }
     }
-    ctx.reply(render(ctx.from.id), { reply_markup: getCalculator(ctx.from.id).scientific ? (getCalculator(ctx.from.id).secondary ? INV_SCIENTIFIC : SCIENTIFIC) : BASIC });
+}
+
+calculatorModule.command("cal", async (ctx: CommandContext<Context>): Promise<void> => {
+    if (ctx.from === undefined) {
+        ctx.reply("`ctx.from` is undefined.");
+        return;
+    }
+
+    const userId: number = ctx.from.id;
+
+    await ensureCalculatorDataInitialized(userId);
+
+    ctx.reply(render(userId), { reply_markup: constructKeyboard(userId) });
 });
 
-calculatorModule.callbackQuery(new RegExp(`^${Callbacks.CALCULATOR} ([0-9]|[1-2][0-9]|3[0-7])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
-    const key: number = parseInt(ctx.match[1] as string);
+calculatorModule.callbackQuery(new RegExp(`^${Callback.CALCULATOR} (\\d+) ([0-9]|[1-2][0-9]|3[0-7])$`), async (ctx: CallbackQueryContext<Context>): Promise<void> => {
+    const ownerId: number = Number(ctx.match[1]);
+    const userId: number = ctx.from.id;
+
+    if (ownerId !== userId)
+    {
+        await ctx.answerCallbackQuery({
+            text: 'This is not your property.',
+            show_alert: true
+        });
+        return;
+    }
+
+    await ensureCalculatorDataInitialized(userId);
+
+    const key: number = parseInt(ctx.match[2] as string);
 
     switch (key) {
-        case Keys.CLEAR:
-            getCalculator(ctx.from.id).entries = [];
-            getCalculator(ctx.from.id).result = "";
+        case Key.CLEAR:
+            getCalculator(userId).entries = [];
+            getCalculator(userId).result = "";
             break;
-        case Keys.BACKSPACE:
-            getCalculator(ctx.from.id).entries.pop();
+        case Key.BACKSPACE:
+            getCalculator(userId).entries.pop();
             break;
-        case Keys.MODE_SWITCH:
-            getCalculator(ctx.from.id).scientific = !getCalculator(ctx.from.id).scientific;
+        case Key.MODE_SWITCH:
+            getCalculator(userId).scientific = !getCalculator(userId).scientific;
             break;
-        case Keys.EQUAL:
-            getCalculator(ctx.from.id).result = compileExpression(ctx.from.id);
+        case Key.EQUAL:
+            getCalculator(userId).result = compileExpression(userId);
             break;
-        case Keys.SECONDARY:
-            getCalculator(ctx.from.id).secondary = !getCalculator(ctx.from.id).secondary;
+        case Key.SECONDARY:
+            getCalculator(userId).secondary = !getCalculator(userId).secondary;
             break;
         default:
-            getCalculator(ctx.from.id).entries.push(key);
+            getCalculator(userId).entries.push(key);
     }
 
     ctx.answerCallbackQuery();
-    await updateCalculator(ctx.from.id, getCalculator(ctx.from.id));
-    await ctx.editMessageText(render(ctx.from.id), { reply_markup: getCalculator(ctx.from.id).scientific ? (getCalculator(ctx.from.id).secondary ? INV_SCIENTIFIC : SCIENTIFIC) : BASIC });
+    await updateCalculator(userId, getCalculator(userId));
+    await ctx.editMessageText(render(userId), { reply_markup: constructKeyboard(userId) });
 });
 
 function render(userId: number): string {
@@ -136,70 +164,70 @@ function render(userId: number): string {
             renderer += entry;
         else {
             switch (entry) {
-                case Keys.PERCENTAGE:
+                case Key.PERCENTAGE:
                     renderer += '%';
                     break;
-                case Keys.DIVIDE:
+                case Key.DIVIDE:
                     renderer += '÷';
                     break;
-                case Keys.MULTIPLY:
+                case Key.MULTIPLY:
                     renderer += '×';
                     break;
-                case Keys.MINUS:
+                case Key.MINUS:
                     renderer += '-';
                     break;
-                case Keys.PLUS:
+                case Key.PLUS:
                     renderer += '+';
                     break;
-                case Keys.DECIMAL:
+                case Key.DECIMAL:
                     renderer += '.';
                     break;
-                case Keys.SINE:
+                case Key.SINE:
                     renderer += "sin(";
                     break;
-                case Keys.COSINE:
+                case Key.COSINE:
                     renderer += "cos(";
                     break;
-                case Keys.TANGENT:
+                case Key.TANGENT:
                     renderer += "tan(";
                     break;
-                case Keys.EXPONENT:
+                case Key.EXPONENT:
                     renderer += "^";
                     break;
-                case Keys.LOG:
+                case Key.LOG:
                     renderer += "log(";
                     break;
-                case Keys.NATURAL_LOG:
+                case Key.NATURAL_LOG:
                     renderer += "ln(";
                     break;
-                case Keys.LEFT_PARENTHESIS:
+                case Key.LEFT_PARENTHESIS:
                     renderer += '(';
                     break;
-                case Keys.RIGHT_PARENTHESIS:
+                case Key.RIGHT_PARENTHESIS:
                     renderer += ')';
                     break;
-                case Keys.SQUARE_ROOT:
+                case Key.SQUARE_ROOT:
                     renderer += '√';
                     break;
-                case Keys.FACTORIAL:
+                case Key.FACTORIAL:
                     renderer += '!';
                     break;
-                case Keys.POWER_OF_NEGATIVE_ONE:
+                case Key.POWER_OF_NEGATIVE_ONE:
                     renderer += "^-1";
                     break;
-                case Keys.PI:
+                case Key.PI:
                     renderer += 'π';
                     break;
-                case Keys.EULER_NUMBER:
+                case Key.EULER_NUMBER:
                     renderer += 'e';
                     break;
-                case Keys.ARCSINE:
+                case Key.ARCSINE:
                     renderer += 'arcsin(';
                     break;
-                case Keys.ARCCOSINE:
+                case Key.ARCCOSINE:
                     renderer += 'arccos(';
                     break;
-                case Keys.ARCTANGENT:
+                case Key.ARCTANGENT:
                     renderer += 'arctan(';
             }
         }
@@ -217,70 +245,70 @@ export function compileExpression(userId: number): string {
             compiler += entry;
         else {
             switch (entry) {
-                case Keys.PERCENTAGE:
+                case Key.PERCENTAGE:
                     compiler += '/100';
                     break;
-                case Keys.DIVIDE:
+                case Key.DIVIDE:
                     compiler += '/';
                     break;
-                case Keys.MULTIPLY:
+                case Key.MULTIPLY:
                     compiler += '*';
                     break;
-                case Keys.MINUS:
+                case Key.MINUS:
                     compiler += '-';
                     break;
-                case Keys.PLUS:
+                case Key.PLUS:
                     compiler += '+';
                     break;
-                case Keys.DECIMAL:
+                case Key.DECIMAL:
                     compiler += '.';
                     break;
-                case Keys.SINE:
+                case Key.SINE:
                     compiler += "Math.sin(";
                     break;
-                case Keys.COSINE:
+                case Key.COSINE:
                     compiler += "Math.cos(";
                     break;
-                case Keys.TANGENT:
+                case Key.TANGENT:
                     compiler += "Math.tan(";
                     break;
-                case Keys.EXPONENT:
+                case Key.EXPONENT:
                     compiler += '**';
                     break;
-                case Keys.LOG:
+                case Key.LOG:
                     compiler += "Math.log10(";
                     break;
-                case Keys.NATURAL_LOG:
+                case Key.NATURAL_LOG:
                     compiler += "Math.log(";
                     break;
-                case Keys.LEFT_PARENTHESIS:
+                case Key.LEFT_PARENTHESIS:
                     compiler += '(';
                     break;
-                case Keys.RIGHT_PARENTHESIS:
+                case Key.RIGHT_PARENTHESIS:
                     compiler += ')';
                     break;
-                case Keys.SQUARE_ROOT:
+                case Key.SQUARE_ROOT:
                     compiler += 'Math.sqrt(';
                     break;
-                case Keys.FACTORIAL:
+                case Key.FACTORIAL:
                     // compiler += '!';
                     break;
-                case Keys.POWER_OF_NEGATIVE_ONE:
+                case Key.POWER_OF_NEGATIVE_ONE:
                     compiler += "**-1";
                     break;
-                case Keys.PI:
+                case Key.PI:
                     compiler += 'Math.PI';
                     break;
-                case Keys.EULER_NUMBER:
+                case Key.EULER_NUMBER:
                     compiler += 'Math.E';
                     break;
-                case Keys.ARCSINE:
+                case Key.ARCSINE:
                     compiler += 'Math.asin(';
                     break;
-                case Keys.ARCCOSINE:
+                case Key.ARCCOSINE:
                     compiler += 'Math.acos(';
                     break;
-                case Keys.ARCTANGENT:
+                case Key.ARCTANGENT:
                    compiler += 'Math.atan(';
             }
         }
